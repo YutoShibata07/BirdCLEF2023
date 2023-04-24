@@ -1,9 +1,9 @@
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=0
 
-# python utils/create_roi_image.py --input_dataset train_images_1024
-python utils/make_config.py --batch_size 3560 3560 --lr_max 1e-3 --lr_min 1e-4  --max_epoch 15 --model lstm_ver3 lstm_ver3 --file_limit 100 --long_sample aux_and_max aux_and_max --pulse_limit 96 --num_layers 4 4 --embed_dim 196 196
+python utils/get_val_files.py
+python utils/make_config.py --batch_size 256 256 --lr_max 1e-4 --lr_min 1e-5  --max_epoch 15 --model bird_base bird_base 
 
-files="../result/*and*"
+files="../result/*"
 for filepath in $files; do
     if [ -d $filepath ] ; then
         flag="${filepath}/final_model.prm"

@@ -34,7 +34,7 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--root_dir",
         type=str,
-        default="./result",
+        default="../result",
         help="path to a directory where you want to make config files and directories.",
     )
 

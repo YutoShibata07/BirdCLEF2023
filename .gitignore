@@ -1,0 +1,12 @@
+result
+*/*.pyc
+*/*/*.pyc
+*/*/*/*.pyc
+*/wandb
+test
+train_samples
+train
+result_ensamble
+dataset
+data
+csv

@@ -26,7 +26,7 @@ class Config:
     
     max_epoch:int = 30
     
-    input_dim:int = 6
+    input_feature:str = 'logmel'
     
     embed_dim:int = 128
     

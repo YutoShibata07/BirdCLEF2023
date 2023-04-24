@@ -12,9 +12,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from torch.utils.data import DataLoader
 
 from libs.meter import AverageMeter, ProgressMeter
-from libs.metric import angular_dist_score, angular_dist_score_numpy
-from libs.convertAngle import pred_to_angle_azshift
-from libs.convertAngle import y_to_onehot
+from libs.metric import padded_cmap, padded_cmap_numpy
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, ReduceLROnPlateau
 
 __all__ = ["train", "evaluate"]
@@ -33,7 +31,6 @@ def do_one_iteration(
     iter_type: str,
     optimizer: Optional[optim.Optimizer] = None,
     scheduler = None,
-    bin_num:int = 24
 ) -> Tuple[int, float, float, np.ndarray, np.ndarray]:
 
     if iter_type not in ["train", "evaluate"]:
@@ -46,18 +43,13 @@ def do_one_iteration(
         logger.error(message)
         raise ValueError(message)
 
-    x = sample[0].to(device).float()
-    azimuth = sample[1][:,0]
-    zenith = sample[1][:,1]
-    t = sample[2].to(device)
+    x = sample['sound'].to(device).float()
+    t = sample['target'].to(device)
     
 
     batch_size = x.shape[0]
     output = model(x)
     loss = criterion(output, t)
-    # print(output)
-    # print(loss)
-    # # assert False
     if iter_type == "train" and optimizer is not None:
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -65,7 +57,7 @@ def do_one_iteration(
         optimizer.step()
 
     # keep predicted results and gts for calculate F1 Score
-    gt = np.stack([azimuth, zenith]).T
+    gt = t.to('cpu').detach().numpy()
     pred = output.to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
     return batch_size, loss.item(), gt, pred
 
@@ -79,7 +71,6 @@ def train(
     epoch: int,
     device: str,
     interval_of_progress: int = 50,
-    bin_num:int = 16
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
 
     batch_time = AverageMeter("Time", ":6.3f")
@@ -106,16 +97,15 @@ def train(
         data_time.update(time.time() - end)
 
         batch_size, loss, gt, pred = do_one_iteration(
-            sample, model, criterion, device, "train", optimizer, scheduler = scheduler, bin_num=bin_num
+            sample, model, criterion, device, "train", optimizer, scheduler = scheduler
         )
 
         losses.update(loss, batch_size)
         # top1.update(acc1, batch_size)
 
         # save the ground truths and predictions in lists
-        if i < 125:
-            gts += list(gt)
-            preds += list(pred)
+        gts += list(gt)
+        preds += list(pred)
 
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -131,11 +121,8 @@ def train(
     # f1s = f1_score(gts, preds, average="macro")
     gts = np.array(gts)
     preds = np.array(preds)
-    preds = preds[:200000 * 5]
-    gts = gts[:200000 * 5]
     preds = softmax(preds)
-    preds_angles = pred_to_angle_azshift(preds, bin_num=bin_num)
-    score = angular_dist_score_numpy(preds_angles, gts)
+    score = padded_cmap_numpy(predictions=preds, gts = gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score
 
@@ -161,7 +148,7 @@ def evaluate(
         for sample in loader:
             
             batch_size, loss, gt, pred = do_one_iteration(
-                sample, model, criterion, device, "evaluate", bin_num=bin_num
+                sample, model, criterion, device, "evaluate"
             )
 
             losses.update(loss, batch_size)
@@ -171,10 +158,9 @@ def evaluate(
             gts += list(gt)
             preds += list(pred)
 
-    # f1s = f1_score(gts, preds, average="macro")
     gts = np.array(gts)
     preds = np.array(preds)
     preds = softmax(preds)
-    pred_angles = pred_to_angle_azshift(preds, bin_num=bin_num)
-    score = angular_dist_score_numpy(pred_angles, gts)
-    return losses.get_average(), gts, pred_angles, score
+    score = padded_cmap_numpy(predictions=preds, gts = gts)
+    # score = score.to('cpu').detach().numpy()[0]
+    return losses.get_average(), gts, preds, score

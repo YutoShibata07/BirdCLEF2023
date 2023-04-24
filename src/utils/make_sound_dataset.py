@@ -13,7 +13,7 @@ import librosa
 import soundfile as sf
 import tqdm
 from multiprocessing import Pool
-
+from tqdm import tqdm
 logger = getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -96,7 +96,7 @@ def crop_or_pad(y, length, is_train=True, start=None):
     return y
 
 class LogMelIntensityExtractor:
-    def __init__(self, sr, nfft, n_mels, fmin = 0, fmax=24000, duration=5, resample=True, save_dir = ''):
+    def __init__(self, sr, nfft, n_mels, fmin = 0, fmax=24000, duration=5, resample=True, save_dir = '', dataset_name='original'):
         self.n_mels = n_mels
         self.nfft = nfft
         self.sr = sr
@@ -111,6 +111,7 @@ class LogMelIntensityExtractor:
         self.step = self.audio_length
         self.resample = resample
         self.save_dir = save_dir
+        self.dataset_name = dataset_name
         
     def logmel(self, sig):
         melspec = librosa.feature.melspectrogram(
@@ -139,8 +140,9 @@ class LogMelIntensityExtractor:
         images = np.stack(images)
         label = sig_path.split('/')[-2]
         file_id = sig_path.split('/')[-1].split('.')[0]
-        np.save(os.path.join(self.save_dir, label + '_' + file_id + '.npy'), images)
-        return images
+        os.makedirs(os.path.join(self.save_dir, self.dataset_name, label), exist_ok=True)
+        np.save(os.path.join(self.save_dir, self.dataset_name, label, file_id + '.npy'), images)
+        return 
 
 
 def main() -> None:
@@ -165,17 +167,11 @@ def main() -> None:
     DEBUG = False
     meta_df = pd.read_csv(args.meta_path)
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
-    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels)
+    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
     filepath_list = meta_df['filename']
-    
-    # for idx in range(len(meta_df)):
-    #     filepath = meta_df.iloc[idx]['filename']
-    #     melspec = feature_extractor.transform(filepath)
-    #     print(filepath)
-    #     label = filepath.split('/')[-2]
-    #     file_id = filepath.split('/')[-1].split('.')[0]
-    #     # assert False
-    #     np.save(os.path.join(args.save_dir, label + '_' + file_id + '.npy'), melspec)
+    # ToDo -> 並列処理で前処理を実行
+    for file_ in tqdm(filepath_list, total=len(filepath_list)):
+        feature_extractor.save_soundfile(file_)
         
     print("Finished making sound dataset.")
     
