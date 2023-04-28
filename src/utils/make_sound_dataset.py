@@ -14,6 +14,7 @@ import soundfile as sf
 import tqdm
 from multiprocessing import Pool
 from tqdm import tqdm
+from multiprocessing import Pool
 logger = getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -105,10 +106,10 @@ class LogMelIntensityExtractor:
             n_fft=nfft,
         )
         self.fmin = fmin
-        self.fmax = fmax
+        self.fmax = self.sr//2
         self.duration = duration
         self.audio_length = self.duration * self.sr
-        self.step = self.audio_length
+        self.step = int(self.duration*0.666*self.sr)
         self.resample = resample
         self.save_dir = save_dir
         self.dataset_name = dataset_name
@@ -164,14 +165,15 @@ def main() -> None:
         # return
     else:
         os.mkdir(dataset_dir)
-    DEBUG = False
     meta_df = pd.read_csv(args.meta_path)
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
     feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
     filepath_list = meta_df['filename']
     # ToDo -> 並列処理で前処理を実行
-    for file_ in tqdm(filepath_list, total=len(filepath_list)):
-        feature_extractor.save_soundfile(file_)
+    p = Pool(10)
+    result = p.map(feature_extractor.save_soundfile, filepath_list)
+    # for file_ in tqdm(filepath_list, total=len(filepath_list)):
+    #     feature_extractor.save_soundfile(file_)
         
     print("Finished making sound dataset.")
     

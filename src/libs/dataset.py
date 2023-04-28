@@ -41,6 +41,20 @@ def get_dataloader(
 
     return dataloader
 
+def mono_to_color(X, eps=1e-6, mean=None, std=None):
+    mean = X.mean()
+    std = X.std()
+    X = (X - mean) / (std + eps)
+    
+    _min, _max = X.min(), X.max()
+
+    if (_max - _min) > eps:
+        V = np.clip(X, _min, _max)
+        V = (V - _min) / (_max - _min)
+        # V = V.astype(np.uint8)
+    else:
+        V = np.zeros_like(X, dtype=np.uint8)
+    return V
 
 class BirdClefDataset(Dataset):
     def __init__(
@@ -63,6 +77,7 @@ class BirdClefDataset(Dataset):
 
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
+        sound = mono_to_color(sound)
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         if self.split == 'train':
             sound = sound[np.random.choice(sound.shape[0]), :, :]
