@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 python utils/get_val_files.py
-python utils/make_config.py --batch_size 256 256 --lr_max 1e-4 --lr_min 1e-5  --max_epoch 15 --model bird_base bird_base 
+python utils/make_config.py --batch_size 32 32 --lr_max 1e-4 --lr_min 1e-5  --max_epoch 15 --model bird_base bird_base 
 
 files="../result/*"
 for filepath in $files; do

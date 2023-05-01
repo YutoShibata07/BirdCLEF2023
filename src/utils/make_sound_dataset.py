@@ -172,8 +172,8 @@ def main() -> None:
     # ToDo -> 並列処理で前処理を実行
     p = Pool(10)
     result = p.map(feature_extractor.save_soundfile, filepath_list)
-    # for file_ in tqdm(filepath_list, total=len(filepath_list)):
-    #     feature_extractor.save_soundfile(file_)
+    for file_ in tqdm(filepath_list, total=len(filepath_list)):
+        feature_extractor.save_soundfile(file_)
         
     print("Finished making sound dataset.")
     
