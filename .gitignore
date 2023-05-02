@@ -10,3 +10,4 @@ result_ensamble
 dataset
 data
 csv
+*/*/*/__pycache__/*

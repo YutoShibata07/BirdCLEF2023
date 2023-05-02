@@ -38,6 +38,8 @@ class Config:
     
     lr_min:float = 1e-6
     
+    do_mixup:bool = False
+    
     augmentations: Tuple[str, ...] = ('')
     
     def __post_init__(self) -> None:
