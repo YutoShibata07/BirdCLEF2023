@@ -190,13 +190,13 @@ def main():
         for epoch in range(begin_epoch, config.max_epoch):
             start = time.time()
             train_loss, gts, preds, train_score = train(
-                train_loader, model, criterion, optimizer, scheduler, epoch, device
+                train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup
             )
             train_time = int(time.time()-start)
             
             start = time.time()
             val_loss, val_gts, val_preds, val_score = evaluate(
-                val_loader, model, criterion, device
+                val_loader, model, criterion, device, do_mixup=False
             )
             val_time = int(time.time() - start)
             if val_score > best_score:
