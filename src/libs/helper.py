@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from libs.meter import AverageMeter, ProgressMeter
 from libs.metric import padded_cmap, padded_cmap_numpy
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, ReduceLROnPlateau
-
+from libs.loss_fn import mixup
 __all__ = ["train", "evaluate"]
 
 logger = getLogger(__name__)
@@ -31,6 +31,7 @@ def do_one_iteration(
     iter_type: str,
     optimizer: Optional[optim.Optimizer] = None,
     scheduler = None,
+    do_mixup:bool = False
 ) -> Tuple[int, float, float, np.ndarray, np.ndarray]:
 
     if iter_type not in ["train", "evaluate"]:
@@ -49,7 +50,12 @@ def do_one_iteration(
 
     batch_size = x.shape[0]
     output = model(x)
-    loss = criterion(output, t)
+    if (do_mixup==True) & (np.random.rand() > 0.5):
+        mixed_x, y_a, y_b, lam = mixup.mixup_data(x, t)
+        output = model(mixed_x)
+        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam)
+    else:
+        loss = criterion(output, t)
     if iter_type == "train" and optimizer is not None:
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -71,6 +77,7 @@ def train(
     epoch: int,
     device: str,
     interval_of_progress: int = 50,
+    do_mixup:bool = False,
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
 
     batch_time = AverageMeter("Time", ":6.3f")
@@ -97,7 +104,7 @@ def train(
         data_time.update(time.time() - end)
 
         batch_size, loss, gt, pred = do_one_iteration(
-            sample, model, criterion, device, "train", optimizer, scheduler = scheduler
+            sample, model, criterion, device, "train", optimizer, scheduler = scheduler, do_mixup=do_mixup
         )
 
         losses.update(loss, batch_size)
@@ -132,8 +139,7 @@ def evaluate(
     model: nn.Module,
     criterion: Any,
     device: str,
-    mode: str = "train",
-    bin_num:int = 16
+    do_mixup:bool = False,
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
     losses = AverageMeter("Loss", ":.4e")
 
@@ -148,7 +154,7 @@ def evaluate(
         for sample in loader:
             
             batch_size, loss, gt, pred = do_one_iteration(
-                sample, model, criterion, device, "evaluate"
+                sample, model, criterion, device, "evaluate", do_mixup=do_mixup
             )
 
             losses.update(loss, batch_size)
