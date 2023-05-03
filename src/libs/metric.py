@@ -32,6 +32,7 @@ def padded_cmap_numpy(gts, predictions, padding_factor=5):
     new_rows = []
     for i in range(padding_factor):
         new_rows.append([1 for i in range(predictions.shape[-1])])
+    
     new_samples = np.array(new_rows)
     tmp_gts = np.identity(predictions.shape[1])[gts]
     padded_predictoins = np.concatenate([predictions, new_samples])

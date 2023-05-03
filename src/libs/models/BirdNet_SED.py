@@ -129,11 +129,8 @@ class BirdNet_SED(nn.Module):
         self.backbone.classifier = nn.Sequential(
             nn.Linear(self.in_features, output_dim)
         )
-        # hyperparams
-        pooling = 'max'
-        n_mels = 128
         
-        self.bn0 = nn.BatchNorm2d(n_mels)
+        self.bn0 = nn.BatchNorm2d(128)
 
         layers = list(self.backbone.children())[:-2]
         self.encoder = nn.Sequential(*layers)
@@ -141,7 +138,9 @@ class BirdNet_SED(nn.Module):
         self.fc1 = nn.Linear(self.in_features, self.in_features, bias=True)
         self.att_block = AttBlockV2(
             self.in_features, output_dim, activation="sigmoid")
-        
+        # Spec augmenter
+        self.spec_augmenter = SpecAugmentation(time_drop_width=2, time_stripes_num=2,
+                                               freq_drop_width=2, freq_stripes_num=2)        
         self.init_weight()
         
     def init_weight(self):
@@ -151,17 +150,14 @@ class BirdNet_SED(nn.Module):
     def forward(self, x):
         # (batch_size, 3, mel_bins, time_steps)
         frames_num = x.shape[3]
-        # x = x.transpose(1, 3)
-        # x = self.bn0(x)
-        # x = x.transpose(1, 3)
-        # if self.training:
-        #     x = self.spec_augmenter(x)
-        #     x = x.transpose(2, 3)
+
+        if self.training:
+            x = self.spec_augmenter(x)
+        
         # (batch_size, channels, freq, frames)
         x = self.encoder(x)
 
-        # (batch_size, channels, frames)
-        x = torch.mean(x, dim=2)
+        x = torch.mean(x, dim=2) # (batch_size, channels, frames)
 
         # channel smoothing
         x1 = F.max_pool1d(x, kernel_size=3, stride=1, padding=1)
@@ -196,4 +192,4 @@ class BirdNet_SED(nn.Module):
             "clipwise_output": clipwise_output # (batch_size, out_dim)
         }
 
-        return logit
+        return output_dict

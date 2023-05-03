@@ -63,8 +63,8 @@ def do_one_iteration(
         optimizer.step()
 
     # keep predicted results and gts for calculate F1 Score
-    gt = t.to('cpu').detach().numpy()
-    pred = output.to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
+    gt = t.to('cpu').detach().argmax(dim=1).numpy()
+    pred = output['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
     return batch_size, loss.item(), gt, pred
 
 
@@ -165,6 +165,7 @@ def evaluate(
             preds += list(pred)
 
     gts = np.array(gts)
+    
     preds = np.array(preds)
     preds = softmax(preds)
     score = padded_cmap_numpy(predictions=preds, gts = gts)
