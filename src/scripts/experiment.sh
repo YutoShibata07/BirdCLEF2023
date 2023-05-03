@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
 python utils/get_val_files.py
-python utils/make_config.py --batch_size 256 256 --lr_max 1e-4 1e-3 --lr_min 1e-5  --max_epoch 25 30 --model bird_base bird_base --do_mixup True True
+python utils/make_config.py --batch_size 16 16 --lr_max 1e-4 1e-3 --lr_min 1e-5  --max_epoch 25 30 --model bird_sed bird_sed --do_mixup True True
 
 files="../result/*do_mixup*"
 for filepath in $files; do

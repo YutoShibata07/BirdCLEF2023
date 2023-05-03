@@ -110,8 +110,8 @@ def main():
     # configuration
     config = get_config(args.config)
     
-    train_files = np.load('/home/ubuntu/slocal/BirdCLEF2023/csv/train_files.npy')
-    val_files = np.load('/home/ubuntu/slocal/BirdCLEF2023/csv/val_files.npy')
+    train_files = np.load('../../BirdCLEF2023/csv/train_files.npy')
+    val_files = np.load('../../BirdCLEF2023/csv/val_files.npy')
     if args.debug:
         config.max_epoch = 1
         config.file_limit = 1
@@ -124,7 +124,7 @@ def main():
     # cpu or cuda
     device = get_device(allow_only_gpu=False)
         
-    ss = pd.read_csv('/home/ubuntu/slocal/BirdCLEF2023/data/sample_submission.csv')
+    ss = pd.read_csv('../../BirdCLEF2023/data/sample_submission.csv')
     birds = list(ss.columns[1:])
     bird_label_map = {birds[i]:i for i in range(len(birds))}
     train_loader = get_dataloader(
