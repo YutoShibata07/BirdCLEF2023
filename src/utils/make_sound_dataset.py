@@ -15,6 +15,7 @@ import tqdm
 from multiprocessing import Pool
 from tqdm import tqdm
 from multiprocessing import Pool
+import json
 logger = getLogger(__name__)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -132,7 +133,10 @@ class LogMelIntensityExtractor:
         return images
     
     def save_soundfile(self, sig_path):
+        print(sig_path)
         sound, original_sr = sf.read(sig_path)
+        if len(sound.shape) > 1:
+            sound = sound[:,0]
         if (self.resample==True) & (original_sr != self.sr):
             sound = librosa.resample(sound, original_sr, self.sr, res_type="kaiser_fast")
         sounds = [sound[i:i+self.audio_length] for i in range(0, max(1, len(sound) - self.audio_length + 1), self.step)]
@@ -151,6 +155,10 @@ def main() -> None:
 
     # 保存ディレクトリがなければ，作成
     os.makedirs(args.save_dir, exist_ok=True)
+    args_dict = vars(args)
+    f = open(args.save_dir + '/' + 'args.txt', 'w')
+    f.write(json.dumps(args_dict))
+    f.close()
     if args.processed_method == "logmel":
         dataset_name = "logmel"
     else:
@@ -166,6 +174,8 @@ def main() -> None:
     else:
         os.mkdir(dataset_dir)
     meta_df = pd.read_csv(args.meta_path)
+    if '2021' in args.sound_dir:
+        meta_df['filename'] = meta_df['primary_label'].str.cat(meta_df['filename'], sep='/')
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
     feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
     filepath_list = meta_df['filename']
