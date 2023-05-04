@@ -1,4 +1,5 @@
 from logging import getLogger
+from .BirdNet_SED import BirdNet_SED
 
 import torch.nn as nn
 import torchvision
@@ -10,6 +11,7 @@ __all__ = ["get_model"]
 
 model_names = [
     'bird_base',
+    'bird_sed',
 ]
 logger = getLogger(__name__)
 
@@ -21,6 +23,7 @@ def get_model(
     if name not in model_names:
         message = (
             "There is no model appropriate to your choice. "
+            "model_name is %s" %name,
             "You have to choose %s as a model." % (", ").join(model_names)
         )
         logger.error(message)
@@ -30,6 +33,8 @@ def get_model(
 
     if name == "bird_base":
         model = BirdNet(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
+    elif name == "bird_sed":
+        model = BirdNet_SED(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
     else:
         logger.error( "There is no model appropriate to your choice. ")
     return model
@@ -47,3 +52,6 @@ class BirdNet(nn.Module):
         output = self.backbone(x)
         return output
         
+
+                
+            
