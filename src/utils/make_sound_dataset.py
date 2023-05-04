@@ -170,7 +170,7 @@ def main() -> None:
     # すでにデータセットが存在しているなら終了
     if os.path.exists(dataset_dir):
         print("Sound dataset exists.")
-        # return
+        return
     else:
         os.mkdir(dataset_dir)
     meta_df = pd.read_csv(args.meta_path)

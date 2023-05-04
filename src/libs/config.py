@@ -42,6 +42,10 @@ class Config:
     
     augmentations: Tuple[str, ...] = ('')
     
+    training_year:str = "2023"
+    
+    model_path:str = ''
+    
     def __post_init__(self) -> None:
         self._type_check()
         self._value_check()
