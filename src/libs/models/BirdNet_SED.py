@@ -151,8 +151,8 @@ class BirdNet_SED(nn.Module):
         # (batch_size, 3, mel_bins, time_steps)
         frames_num = x.shape[3]
 
-        if self.training:
-            x = self.spec_augmenter(x)
+        # if self.training:
+        #     x = self.spec_augmenter(x)
         
         # (batch_size, channels, freq, frames)
         x = self.encoder(x)
