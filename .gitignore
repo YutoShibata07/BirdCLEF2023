@@ -10,5 +10,7 @@ result_ensamble
 dataset
 data
 csv
+csv*
 data*
 */*/*/__pycache__/*
+*/*/*ipynb
