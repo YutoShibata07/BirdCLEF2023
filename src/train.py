@@ -111,8 +111,14 @@ def main():
     # configuration
     config = get_config(args.config)
     
-    train_files = np.load('../../BirdCLEF2023/csv/train_files.npy')
-    val_files = np.load('../../BirdCLEF2023/csv/val_files.npy')
+    if config.training_year == '2021_2022':
+        train_file_path = '../csv_2021_2022/train_files.npy'
+        val_file_path = '../csv_2021_2022/val_files.npy'
+    else:
+        train_file_path = '../csv/train_files.npy'
+        val_file_path = '../csv/val_files.npy'
+    train_files = np.load(train_file_path)
+    val_files = np.load(val_file_path)
     if args.debug:
         config.max_epoch = 1
         config.file_limit = 1
@@ -135,6 +141,7 @@ def main():
         
 
     bird_label_map = {birds[i]:i for i in range(len(birds))}
+    print(len(bird_label_map.keys()))
     train_loader = get_dataloader(
         files = train_files,
         batch_size=config.batch_size,
@@ -158,6 +165,7 @@ def main():
         bird_label_map = bird_label_map,
         shuffle=False,
     )
+    # 過去データでPretrainしたweightsをロードする
     if "2021_2022" in config.model_path:
         model = get_model(
             config.model,
@@ -170,6 +178,23 @@ def main():
         model.backbone.classifier = nn.Sequential(
             nn.Linear(model.in_features, len(birds))
         )
+        if 'sed' in config.model:
+            model.att_block.att = nn.Conv1d(
+                in_channels=model.in_features,
+                out_channels=len(birds),
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=True
+            )
+            model.att_block.cla = nn.Conv1d(
+                in_channels=model.in_features,
+                out_channels=len(birds),
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=True
+            )
     else:
         model = get_model(
             config.model,

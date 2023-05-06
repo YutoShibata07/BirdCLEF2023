@@ -78,13 +78,14 @@ class BirdClefDataset(Dataset):
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        labels = np.zeros(264, dtype=float)
+        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
         labels[target] = 1.0
         if self.split == 'train':
             sound = sound[np.random.choice(sound.shape[0]), :, :]
         else:
             sound = sound[0,:,:]
         sound = mono_to_color(sound)
+        sound = sound.astype(float)
         sound = np.stack([sound, sound, sound])
         if self.transform is not None:
             sound = self.transform(sound)
