@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 
 
 def get_model(
-    name: str, output_dim:int = 2,
+    name: str, output_dim:int = 2,pretrained_path = '',
 ) -> nn.Module:
     name = name.lower()
     if name not in model_names:
@@ -30,13 +30,39 @@ def get_model(
         raise ValueError(message)
 
     logger.info("{} will be used as a model.".format(name))
-
     if name == "bird_base":
         model = BirdNet(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
     elif name == "bird_sed":
         model = BirdNet_SED(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
     else:
         logger.error( "There is no model appropriate to your choice. ")
+    if pretrained_path != '':
+        logger.info(f'weights loading from:{pretrained_path}')
+        model.load_state_dict(torch.load(pretrained_path))
+        output_dim = 264
+        if 'base' in pretrained_path:
+            model.backbone.classifier = nn.Sequential(
+                nn.Linear(model.in_features, output_dim)
+            )
+        elif 'sed' in pretrained_path:
+            logger.info('FC layer updating...')
+            model.att_block.att = nn.Conv1d(
+                in_channels=model.in_features,
+                out_channels=output_dim,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=True
+            )
+            model.att_block.cla = nn.Conv1d(
+                in_channels=model.in_features,
+                out_channels=output_dim,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=True
+            )
+            
     return model
 
 
@@ -49,8 +75,12 @@ class BirdNet(nn.Module):
             nn.Linear(self.in_features, output_dim)
         )
     def forward(self, x):
-        output = self.backbone(x)
-        return output
+        clipwise_logits = self.backbone(x)
+        output_dict = {
+            "logit": clipwise_logits, # (batch_size, out_dim)
+            'clipwise_output': nn.Softmax(dim = -1)(clipwise_logits)
+        }
+        return output_dict
         
 
                 

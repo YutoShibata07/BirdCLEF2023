@@ -10,24 +10,66 @@ __all__ = ["get_criterion"]
 logger = getLogger(__name__)
 
 def get_criterion(
+    loss_fn:str = 'ce',
 ) -> nn.Module:
-    # criterion = nn.CrossEntropyLoss()
-    criterion = BCEFocal2WayLoss()
+    if loss_fn == 'ce':
+        criterion = CrossEntropyLoss()
+    elif loss_fn == 'focal_bce':
+        criterion = BCEFocalLoss(output_dict=True)
+    elif loss_fn == 'bce':
+        criterion = BinaryCrossEntropyLoss()
+    elif loss_fn == 'bcef_2way':
+        criterion = BCEFocal2WayLoss()
+    elif loss_fn == 'focal_clip_max':
+        criterion = BCEFocalLoss(output_dict=True, clip_max=True)
+    else:
+        message = "loss function not found"
+        logger.error(message)
+        print(loss_fn)
+        raise ValueError(message)
     return criterion
 
+class CrossEntropyLoss(nn.Module):
+    def __init__(self,):
+        super().__init__()
+    def forward(self, preds, targets):
+        ce_loss = nn.CrossEntropyLoss()(preds['clipwise_logit'], targets)
+        return ce_loss
+    
+class BinaryCrossEntropyLoss(nn.Module):
+    def __init__(self,):
+        super().__init__()
+    def forward(self, preds, targets):
+        ce_loss = nn.BCEWithLogitsLoss()(preds['clipwise_logit'], targets)
+        return ce_loss
+
 # https://www.kaggle.com/c/rfcx-species-audio-detection/discussion/213075
+# For clip_max part: https://www.kaggle.com/competitions/birdclef-2021/discussion/243293
 class BCEFocalLoss(nn.Module):
-    def __init__(self, alpha=1, gamma=2.0):
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
+        self.output_dict = output_dict
+        self.clip_max = clip_max
 
     def forward(self, preds, targets):
+        if self.output_dict == True:
+            if self.clip_max==True:
+                preds_clip_max = preds["framewise_logit"].max(1)[0]
+            preds = preds['logit']
         bce_loss = nn.BCEWithLogitsLoss(reduction='none')(preds, targets)
         probas = torch.sigmoid(preds)
         loss = targets * self.alpha * \
             (1. - probas)**self.gamma * bce_loss + \
             (1. - targets) * probas**self.gamma * bce_loss
+        if self.clip_max == True:
+            bce_loss_clip_max = nn.BCEWithLogitsLoss(reduction='none')(preds_clip_max, targets)
+            probas = torch.sigmoid(preds_clip_max)
+            loss_clip_max = targets * self.alpha * \
+                (1. - probas)**self.gamma * bce_loss_clip_max + \
+                (1. - targets) * probas**self.gamma * bce_loss_clip_max
+            loss = loss + 0.5 * loss_clip_max
         loss = loss.mean()
         return loss
     
