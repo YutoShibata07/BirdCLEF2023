@@ -1,0 +1,314 @@
+[2023-05-08 02:37:20] libs.seed INFO: Finished setting up seed.
+[2023-05-08 02:37:20] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 02:37:20] libs.config INFO: successfully loaded configuration.
+[2023-05-08 02:37:21] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 02:37:21] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 02:37:21] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 02:37:21] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 02:37:21] libs.dataset INFO: augmentation list:[]
+[2023-05-08 02:37:21] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 02:37:21] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 02:37:42] __main__ INFO: ../result/model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 02:38:27] __main__ INFO: best score:0.8799602064628894
+[2023-05-08 02:38:31] __main__ INFO: Final score:0.8799602064628894
+[2023-05-08 02:38:31] __main__ INFO: Best score:0.8799602064628894
+[2023-05-08 02:38:37] __main__ INFO: ALL Done !
+[2023-05-08 02:48:14] libs.seed INFO: Finished setting up seed.
+[2023-05-08 02:48:14] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 02:48:14] libs.config INFO: successfully loaded configuration.
+[2023-05-08 02:48:14] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 02:48:14] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 02:48:14] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 02:48:14] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 02:48:14] libs.dataset INFO: augmentation list:[]
+[2023-05-08 02:48:14] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 02:48:14] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 02:48:33] __main__ INFO: ../result/model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 02:49:56] __main__ INFO: best score:0.8799602064628894
+[2023-05-08 02:50:01] __main__ INFO: Final score:0.8799602064628894
+[2023-05-08 02:50:01] __main__ INFO: Best score:0.8799602064628894
+[2023-05-08 02:50:07] __main__ INFO: ALL Done !
+[2023-05-08 02:50:46] libs.seed INFO: Finished setting up seed.
+[2023-05-08 02:50:46] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 02:50:46] libs.config INFO: successfully loaded configuration.
+[2023-05-08 02:50:46] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 02:50:46] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 02:50:46] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 02:50:46] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 02:50:46] libs.dataset INFO: augmentation list:[]
+[2023-05-08 02:50:46] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 02:50:46] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 02:57:11] libs.seed INFO: Finished setting up seed.
+[2023-05-08 02:57:11] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 02:57:11] libs.config INFO: successfully loaded configuration.
+[2023-05-08 02:57:11] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 02:57:11] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 02:57:11] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 02:57:11] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 02:57:11] libs.dataset INFO: augmentation list:[]
+[2023-05-08 02:57:11] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 02:57:11] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 02:57:33] __main__ INFO: ../result/model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 02:59:18] __main__ INFO: best score:0.8799602064628894
+[2023-05-08 02:59:23] __main__ INFO: Final score:0.8799602064628894
+[2023-05-08 02:59:23] __main__ INFO: Best score:0.8799602064628894
+[2023-05-08 02:59:28] __main__ INFO: ALL Done !
+[2023-05-08 04:25:18] libs.seed INFO: Finished setting up seed.
+[2023-05-08 04:25:18] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 04:25:18] libs.config INFO: successfully loaded configuration.
+[2023-05-08 04:25:18] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 04:25:18] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 04:25:18] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 04:25:18] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 04:25:18] libs.dataset INFO: augmentation list:[]
+[2023-05-08 04:25:18] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 04:25:18] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 04:25:41] __main__ INFO: ../result/model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 04:28:05] __main__ INFO: best score:0.8799527137599192
+[2023-05-08 04:28:10] __main__ INFO: Final score:0.8799527137599192
+[2023-05-08 04:28:10] __main__ INFO: Best score:0.8799527137599192
+[2023-05-08 04:28:16] __main__ INFO: ALL Done !
+[2023-05-08 05:06:56] libs.seed INFO: Finished setting up seed.
+[2023-05-08 05:06:56] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 05:06:56] libs.config INFO: successfully loaded configuration.
+[2023-05-08 05:06:56] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 05:06:56] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 05:06:56] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 05:06:56] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 05:06:56] libs.dataset INFO: augmentation list:[]
+[2023-05-08 05:06:56] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 05:06:56] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 05:07:18] __main__ INFO: ../result/exp052_model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 05:08:56] __main__ INFO: best score:0.879961302408223
+[2023-05-08 05:09:02] __main__ INFO: Final score:0.879961302408223
+[2023-05-08 05:09:02] __main__ INFO: Best score:0.879961302408223
+[2023-05-08 05:09:08] __main__ INFO: ALL Done !
+[2023-05-08 05:09:34] libs.seed INFO: Finished setting up seed.
+[2023-05-08 05:09:34] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 05:09:34] libs.config INFO: successfully loaded configuration.
+[2023-05-08 05:09:34] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 05:09:34] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 05:09:34] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 05:09:34] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 05:09:34] libs.dataset INFO: augmentation list:[]
+[2023-05-08 05:09:34] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 05:09:34] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 05:09:52] __main__ INFO: ../result/exp052_model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 05:11:53] __main__ INFO: best score:0.8799476778374378
+[2023-05-08 05:11:58] __main__ INFO: Final score:0.8799476778374378
+[2023-05-08 05:11:58] __main__ INFO: Best score:0.8799476778374378
+[2023-05-08 05:12:04] __main__ INFO: ALL Done !
+[2023-05-08 05:13:36] libs.seed INFO: Finished setting up seed.
+[2023-05-08 05:13:36] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 05:13:36] libs.config INFO: successfully loaded configuration.
+[2023-05-08 05:13:36] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 05:13:36] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 05:13:36] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 05:13:36] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 05:13:36] libs.dataset INFO: augmentation list:[]
+[2023-05-08 05:13:36] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 05:13:36] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 05:14:58] libs.seed INFO: Finished setting up seed.
+[2023-05-08 05:14:58] libs.config INFO: Experiment Configuration
+{'aug_ver': 4,
+ 'augmentations': (),
+ 'batch_size': 32,
+ 'dataset_name': 'train_images_512',
+ 'do_mixup': True,
+ 'duration': 10,
+ 'early_stop_epoch': 10,
+ 'embed_dim': 128,
+ 'input_feature': 'logmel',
+ 'loss_fn': 'focal_clip_max',
+ 'lr': 1e-05,
+ 'lr_max': 0.001,
+ 'lr_min': 1e-05,
+ 'max_epoch': 30,
+ 'model': 'bird_sed',
+ 'model_path': '',
+ 'num_workers': 2,
+ 'pretrained': True,
+ 'scheduler': 'CosineAnnealingLR',
+ 'training_year': '2021_2022',
+ 'use_class_weight': False}
+[2023-05-08 05:14:58] libs.config INFO: successfully loaded configuration.
+[2023-05-08 05:14:58] libs.dataset INFO: the number of soundscape sound images:1529
+[2023-05-08 05:14:58] libs.dataset INFO: the number of samples: 61612
+[2023-05-08 05:14:58] libs.dataset INFO: augmentation list:['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape']
+[2023-05-08 05:14:58] libs.dataset INFO: the number of samples: 15137
+[2023-05-08 05:14:58] libs.dataset INFO: augmentation list:[]
+[2023-05-08 05:14:58] libs.models INFO: bird_sed will be used as a model.
+[2023-05-08 05:14:58] timm.models.helpers INFO: Loading pretrained weights from url (https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/tf_efficientnet_b0_ns-c0e6a31c.pth)
+[2023-05-08 05:15:17] __main__ INFO: ../result/exp052_model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10/best_model.prm
+[2023-05-08 05:17:08] __main__ INFO: best score:0.8799506957317037
+[2023-05-08 05:17:13] __main__ INFO: Final score:0.8799506957317037
+[2023-05-08 05:17:13] __main__ INFO: Best score:0.8799506957317037
+[2023-05-08 05:17:19] __main__ INFO: ALL Done !
