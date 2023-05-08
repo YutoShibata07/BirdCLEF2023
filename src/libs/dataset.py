@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 import glob
 import os
+import librosa
 __all__ = ["get_dataloader"]
 
 logger = getLogger(__name__)
@@ -126,7 +127,8 @@ class BirdClefDataset(Dataset):
                 soundscapes = soundscapes.transpose(0, 2, 1)
                 soundscapes = soundscapes.reshape([-1, soundscapes.shape[-1]]).T
                 ratio = 0.5 * np.random.rand()
-                sound = sound * (1-ratio) + soundscapes * ratio
+                sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
+                sound = librosa.power_to_db(sound)
             if ('random_power' in self.aug_list) & (np.random.rand() > 0.5):
                 sound = random_power(images=sound, power = 3, c= 0.5)
             if ('white' in self.aug_list) & (np.random.rand() > 0.8):
