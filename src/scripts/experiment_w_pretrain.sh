@@ -4,6 +4,8 @@ export CUDA_VISIBLE_DEVICES=0
 # 過去データの特徴量作成
 python utils/make_sound_dataset.py --sound_dir ../data_2021/train_short_audio --save_dir ../dataset_2021 --meta_path ../data_2021/train_metadata.csv
 python utils/make_sound_dataset.py --sound_dir ../data_2022/train_audio --save_dir ../dataset_2022 --meta_path ../data_2022/train_metadata.csv
+# 鳥なしデータ生成
+python utils/make_sound_dataset_soundscape.py
 # 2023データの分割
 python utils/get_val_files.py
 # 2021,22データの分割
