@@ -44,8 +44,13 @@ class Config:
     
     training_year:str = "2023"
     
-    model_path:str = ''
+    loss_fn:str = 'ce'
     
+    aug_ver:int = 1
+    
+    duration:int = 5
+    
+    model_path:str = ''
     def __post_init__(self) -> None:
         self._type_check()
         self._value_check()

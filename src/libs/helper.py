@@ -23,6 +23,9 @@ def softmax(x):
     u = np.sum(np.exp(x), axis=-1)
     return np.exp(x)/u.reshape(-1, 1)
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
 def do_one_iteration(
     sample: List,
     model: nn.Module,
@@ -128,7 +131,8 @@ def train(
     # f1s = f1_score(gts, preds, average="macro")
     gts = np.array(gts)
     preds = np.array(preds)
-    preds = softmax(preds)
+    # preds = softmax(preds)
+    preds = sigmoid(preds)
     score = padded_cmap_numpy(predictions=preds, gts = gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score
@@ -167,7 +171,8 @@ def evaluate(
     gts = np.array(gts)
     
     preds = np.array(preds)
-    preds = softmax(preds)
+    # preds = softmax(preds)
+    preds = sigmoid(preds)
     score = padded_cmap_numpy(predictions=preds, gts = gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score

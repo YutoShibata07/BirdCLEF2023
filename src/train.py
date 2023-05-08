@@ -15,6 +15,7 @@ from libs.logger import TrainLogger
 from libs.loss_fn import get_criterion
 from libs.helper import train, evaluate
 from libs.seed import set_seed
+from libs.get_augmentatoins import get_augmentations
 
 import os
 import math
@@ -111,8 +112,14 @@ def main():
     # configuration
     config = get_config(args.config)
     
-    train_files = np.load('../../BirdCLEF2023/csv/train_files.npy')
-    val_files = np.load('../../BirdCLEF2023/csv/val_files.npy')
+    if config.training_year == '2021_2022':
+        train_file_path = '../csv_2021_2022/train_files.npy'
+        val_file_path = '../csv_2021_2022/val_files.npy'
+    else:
+        train_file_path = '../csv/train_files.npy'
+        val_file_path = '../csv/val_files.npy'
+    train_files = np.load(train_file_path)
+    val_files = np.load(val_file_path)
     if args.debug:
         config.max_epoch = 1
         config.file_limit = 1
@@ -145,6 +152,8 @@ def main():
         transform=None,
         bird_label_map = bird_label_map,
         shuffle=True,
+        aug_list=get_augmentations(config.aug_ver),
+        duration=config.duration,
     )
 
     val_loader = get_dataloader(
@@ -157,18 +166,16 @@ def main():
         transform=None,
         bird_label_map = bird_label_map,
         shuffle=False,
+        aug_list=[],
+        duration=config.duration
     )
     if "2021_2022" in config.model_path:
+        base_path = '/'.join(args.config.split('/')[:-2])
+        pretrained_path = os.path.join(base_path, config.model_path, 'best_model.prm')
         model = get_model(
             config.model,
-            output_dim=len(birds_2021_2022)
-        )
-        base_path = '/'.join(args.config.split('/')[:-2])
-        logger.info('pretrained weights loading...')
-        logger.info(config.model_path)
-        model.load_state_dict(torch.load(os.path.join(base_path, config.model_path, 'best_model.prm')))
-        model.backbone.classifier = nn.Sequential(
-            nn.Linear(model.in_features, len(birds))
+            output_dim=len(birds_2021_2022),
+            pretrained_path=pretrained_path
         )
     else:
         model = get_model(
@@ -197,7 +204,7 @@ def main():
     train_logger = TrainLogger(log_path, resume=args.resume)
     
     # criterion for loss
-    criterion = get_criterion()
+    criterion = get_criterion(loss_fn = config.loss_fn)
     begin_epoch = 0
     is_done = (os.path.isfile(os.path.join(result_path, f'final_model.prm'))) | (os.path.isfile(os.path.join(result_path, f'final_model_.prm')))
     oof_df = pd.DataFrame(columns  = ['filename', 'primary_label'] + birds)
