@@ -10,6 +10,8 @@ from torchvision import transforms
 import glob
 import os
 import librosa
+import torch.nn as nn
+import torchaudio
 __all__ = ["get_dataloader"]
 
 logger = getLogger(__name__)
@@ -66,6 +68,11 @@ def random_power(images, power = 1.5, c= 0.7):
     images = images**(random.random()*power + c)
     return images
 
+# 残響特性のモデル化 (指数関数型)
+def decay_curve(t, rt60, freq):
+    return np.exp(-t * freq * 0.5 / (rt60 / np.log(10)))
+
+
 class BirdClefDataset(Dataset):
     def __init__(
         self,
@@ -115,6 +122,25 @@ class BirdClefDataset(Dataset):
         sound = sound.transpose(0, 2, 1)
         sound = sound.reshape([-1, sound.shape[-1]]).T
         if self.split == 'train':
+            if ('reverberation' in self.aug_list) & (np.random.rand() > 0.5):
+                sound_p = librosa.db_to_power(sound)
+                sr = 32000
+                # 残響時間 (秒)
+                rt60 = np.random.rand() + 0.2
+                hop_duration = (512 +  1024)/ sr
+                n_frames = sound_p.shape[1]
+
+                # FIRフィルタ長
+                filter_length = int(rt60 * sr / (512 + 1024))
+                # 残響フィルタを適用
+                sound_rev = sound_p.copy()
+                freq_decay = np.random.rand() + 0.5
+                for freq_bin in range(sound_p.shape[0]):
+                    decay = decay_curve(np.arange(filter_length) * hop_duration, rt60, freq=freq_bin * freq_decay)
+                    sound_rev[freq_bin, filter_length-1:] = np.convolve(sound_p[freq_bin, :], decay, mode='valid')
+                ratio = 0.5 * np.random.rand()
+                sound_p = sound_p * (1-ratio) + sound_rev * ratio
+                sound = librosa.power_to_db(sound_p)
             if ('soundscape' in self.aug_list) & (np.random.rand() > 0.5):
                 soundscapes = []
                 for i in range(sound_size):
@@ -150,6 +176,23 @@ class BirdClefDataset(Dataset):
         sound = np.stack([sound, sound, sound])
         if self.transform is not None:
             sound = self.transform(sound)
+        sound = torch.from_numpy(sound)
+        if (self.split == 'train') & (np.random.rand() > 0.5):
+            if ('time_mask' in self.aug_list):
+                transforms_time_mask = nn.Sequential(
+                        torchaudio.transforms.TimeMasking(time_mask_param=10),
+                )
+                time_mask_num = 2 # number of time masking
+                for _ in range(time_mask_num): # tima masking
+                    sound = transforms_time_mask(sound)
+            if 'freq_mask' in self.aug_list:
+                transforms_freq_mask = nn.Sequential(
+                        torchaudio.transforms.FrequencyMasking(freq_mask_param=8),
+                )
+                freq_mask_num = 1 # number of frequency masking
+                for _ in range(freq_mask_num): # frequency masking
+                    sound = transforms_freq_mask(sound)
+        
         sample = {
             "sound": sound,
             "target": labels,

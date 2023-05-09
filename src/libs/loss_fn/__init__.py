@@ -22,6 +22,8 @@ def get_criterion(
         criterion = BCEFocal2WayLoss()
     elif loss_fn == 'focal_clip_max':
         criterion = BCEFocalLoss(output_dict=True, clip_max=True)
+    elif loss_fn == 'focal_clip_max_v2':
+        criterion = BCEFocalLoss_v2(output_dict=True, clip_max=True)
     else:
         message = "loss function not found"
         logger.error(message)
@@ -58,6 +60,34 @@ class BCEFocalLoss(nn.Module):
             if self.clip_max==True:
                 preds_clip_max = preds["framewise_logit"].max(1)[0]
             preds = preds['logit']
+        bce_loss = nn.BCEWithLogitsLoss(reduction='none')(preds, targets)
+        probas = torch.sigmoid(preds)
+        loss = targets * self.alpha * \
+            (1. - probas)**self.gamma * bce_loss + \
+            (1. - targets) * probas**self.gamma * bce_loss
+        if self.clip_max == True:
+            bce_loss_clip_max = nn.BCEWithLogitsLoss(reduction='none')(preds_clip_max, targets)
+            probas = torch.sigmoid(preds_clip_max)
+            loss_clip_max = targets * self.alpha * \
+                (1. - probas)**self.gamma * bce_loss_clip_max + \
+                (1. - targets) * probas**self.gamma * bce_loss_clip_max
+            loss = loss + 0.5 * loss_clip_max
+        loss = loss.mean()
+        return loss
+    
+class BCEFocalLoss_v2(nn.Module):
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.output_dict = output_dict
+        self.clip_max = clip_max
+
+    def forward(self, preds, targets):
+        if self.output_dict == True:
+            if self.clip_max==True:
+                preds_clip_max = preds["framewise_logit"].max(1)[0]
+            preds = torch.logit(preds['clipwise_output'])
         bce_loss = nn.BCEWithLogitsLoss(reduction='none')(preds, targets)
         probas = torch.sigmoid(preds)
         loss = targets * self.alpha * \

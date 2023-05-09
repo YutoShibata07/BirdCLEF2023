@@ -12,6 +12,7 @@ __all__ = ["get_model"]
 model_names = [
     'bird_base',
     'bird_sed',
+    'bird_sed_b1',
 ]
 logger = getLogger(__name__)
 
@@ -34,6 +35,8 @@ def get_model(
         model = BirdNet(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
     elif name == "bird_sed":
         model = BirdNet_SED(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
+    elif name == 'bird_sed_b1':
+        model = BirdNet_SED(model_name = "tf_efficientnet_b1_ns", pretrained=True, output_dim=output_dim)
     else:
         logger.error( "There is no model appropriate to your choice. ")
     if pretrained_path != '':
