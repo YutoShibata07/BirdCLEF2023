@@ -152,9 +152,15 @@ class BirdClefDataset(Dataset):
                 soundscapes = np.array(soundscapes) #[sound_size, freq_num, time_dim]
                 soundscapes = soundscapes.transpose(0, 2, 1)
                 soundscapes = soundscapes.reshape([-1, soundscapes.shape[-1]]).T
-                ratio = 0.5 * np.random.rand()
-                sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
-                sound = librosa.power_to_db(sound)
+                # 12.5%の確率でnocallとする
+                if np.random.rand() > 0.75:
+                    sound = soundscapes.copy()
+                    labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+                    labels[-1] = 1.0
+                else:
+                    ratio = 0.5 * np.random.rand()
+                    sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
+                    sound = librosa.power_to_db(sound)
             if ('random_power' in self.aug_list) & (np.random.rand() > 0.5):
                 sound = random_power(images=sound, power = 3, c= 0.5)
             if ('white' in self.aug_list) & (np.random.rand() > 0.8):

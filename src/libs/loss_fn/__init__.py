@@ -26,6 +26,8 @@ def get_criterion(
         criterion = BCEFocalLoss_v2(output_dict=True, clip_max=True)
     elif loss_fn == 'bce_clip_max_v2':
         criterion = BCELossV2(output_dict=True, clip_max=True)
+    elif 'bce_clip_max_v2_nocall' in loss_fn:
+        criterion = BCELossV2_nocall(output_dict=True, clip_max=True, att_loss_w=int(loss_fn.split('_')[-1]))
     elif loss_fn == 'bce_output':
         criterion = BinaryCrossEntropyLossWithOutput()
     else:
@@ -130,6 +132,30 @@ class BCELossV2(nn.Module):
         if self.clip_max == True:
             bce_loss_clip_max = nn.BCEWithLogitsLoss()(preds_clip_max, targets)
             bce_loss = bce_loss + 0.5 * bce_loss_clip_max
+        return bce_loss
+    
+class BCELossV2_nocall(nn.Module):
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False, att_loss_w = 10):
+        super().__init__()
+        self.output_dict = output_dict
+        self.clip_max = clip_max
+        self.att_loss_w = att_loss_w
+
+    def forward(self, preds, targets):
+        if self.output_dict == True:
+            if self.clip_max==True:
+                preds_clip_max = preds["framewise_logit"].max(1)[0]
+            norm_att = preds['norm_att']
+            preds = torch.logit(preds['clipwise_output'])
+        bce_loss = nn.BCEWithLogitsLoss()(preds, targets)
+        if self.clip_max == True:
+            bce_loss_clip_max = nn.BCEWithLogitsLoss()(preds_clip_max, targets)
+            bce_loss = bce_loss + 0.5 * bce_loss_clip_max
+        is_nocall = targets[:,-1] == 1
+        norm_loss = torch.std(norm_att, dim = -1) #[bs, 265]
+        norm_loss = torch.mean(norm_loss, dim = -1) * is_nocall
+        norm_loss = torch.mean(norm_loss, dim = -1)
+        bce_loss = bce_loss + norm_loss * self.att_loss_w
         return bce_loss
     
 class BCEFocal2WayLoss(nn.Module):

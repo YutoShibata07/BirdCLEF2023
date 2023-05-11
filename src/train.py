@@ -142,6 +142,8 @@ def main():
         
 
     bird_label_map = {birds[i]:i for i in range(len(birds))}
+    print(len(bird_label_map.keys()))
+    bird_label_map['nocall'] = 264
     train_loader = get_dataloader(
         files = train_files,
         batch_size=config.batch_size,
@@ -180,7 +182,7 @@ def main():
     else:
         model = get_model(
             config.model,
-            output_dim=len(birds)
+            output_dim=len(birds) + 1
         )
     
     model.to(device)

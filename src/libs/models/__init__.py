@@ -45,7 +45,7 @@ def get_model(
     if pretrained_path != '':
         logger.info(f'weights loading from:{pretrained_path}')
         model.load_state_dict(torch.load(pretrained_path))
-        output_dim = 264
+        output_dim = 264 + 1
         if 'base' in pretrained_path:
             model.backbone.classifier = nn.Sequential(
                 nn.Linear(model.in_features, output_dim)

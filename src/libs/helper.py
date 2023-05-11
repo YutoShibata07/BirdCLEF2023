@@ -169,8 +169,8 @@ def evaluate(
             preds += list(pred)
 
     gts = np.array(gts)
-    
-    preds = np.array(preds)
+    # 検証データはnocall labelなし
+    preds = np.array(preds)[:,:-1]
     # preds = softmax(preds)
     preds = sigmoid(preds)
     score = padded_cmap_numpy(predictions=preds, gts = gts)

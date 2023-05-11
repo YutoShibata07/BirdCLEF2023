@@ -189,7 +189,8 @@ class BirdNet_SED(nn.Module):
             "segmentwise_output": segmentwise_output, # (batch_size, 4 よくわからん, out_dim])
             "logit": logit, # (batch_size, out_dim)
             "framewise_logit": framewise_logit, # (batch_size, time_steps, out_dim)
-            "clipwise_output": clipwise_output # (batch_size, out_dim)
+            "clipwise_output": clipwise_output, # (batch_size, out_dim)
+            "norm_att":norm_att,
         }
 
         return output_dict
