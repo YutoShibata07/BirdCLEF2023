@@ -88,6 +88,7 @@ class BirdClefDataset(Dataset):
         self.files = files
         self.transform = transform
         self.bird_label_dict = bird_label_map
+        self.df_meta = self.get_metadata()
         self.split = split
         self.aug_list = aug_list
         if 'soundscape' in self.aug_list:
@@ -107,8 +108,14 @@ class BirdClefDataset(Dataset):
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-        labels[target] = 1.0
+        meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+        
+        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
+        labels[target] += 0.999
+        for slabel in eval(meta['secondary_labels']):
+            if slabel in self.bird_label_dict.keys():
+                labels[self.bird_label_dict[slabel]] += 0.299
+        
         sound_size = int(self.duration//5)
         if self.split == 'train':
             start_idx = np.random.choice(sound.shape[0])
@@ -199,3 +206,18 @@ class BirdClefDataset(Dataset):
         }
 
         return sample
+    
+    def get_metadata(self):
+        df_2023 = pd.read_csv('../data/train_metadata.csv')
+        df_2021 = pd.read_csv('../data_2021/train_metadata.csv')
+        df_2022 = pd.read_csv('../data_2022/train_metadata.csv')
+
+        df_2023['soundname'] = df_2023['filename'].map(lambda x: x[:-4])
+        df_2022['soundname'] = df_2022['filename'].map(lambda x: x[:-4])
+        df_2021['soundname'] = df_2021.primary_label + '/' + df_2021['filename'].map(lambda x: x[:-4])
+
+        df_2023 = df_2023[['soundname', 'rating', 'secondary_labels']]
+        df_2022 = df_2022[['soundname', 'rating', 'secondary_labels']]
+        df_2021 = df_2021[['soundname', 'rating', 'secondary_labels']]
+
+        return pd.concat([df_2021, df_2022, df_2023], axis=0)
