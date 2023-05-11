@@ -13,6 +13,7 @@ model_names = [
     'bird_base',
     'bird_sed',
     'bird_sed_b1',
+    'bird_base_b1',
 ]
 logger = getLogger(__name__)
 
@@ -33,6 +34,8 @@ def get_model(
     logger.info("{} will be used as a model.".format(name))
     if name == "bird_base":
         model = BirdNet(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
+    elif name == "bird_base_b1":
+        model = BirdNet(model_name = "tf_efficientnet_b1_ns", pretrained=True, output_dim=output_dim)
     elif name == "bird_sed":
         model = BirdNet_SED(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
     elif name == 'bird_sed_b1':
@@ -81,7 +84,7 @@ class BirdNet(nn.Module):
         clipwise_logits = self.backbone(x)
         output_dict = {
             "logit": clipwise_logits, # (batch_size, out_dim)
-            'clipwise_output': nn.Softmax(dim = -1)(clipwise_logits)
+            'clipwise_output': nn.Sigmoid()(clipwise_logits)
         }
         return output_dict
         

@@ -17,13 +17,17 @@ def get_criterion(
     elif loss_fn == 'focal_bce':
         criterion = BCEFocalLoss(output_dict=True)
     elif loss_fn == 'bce':
-        criterion = BinaryCrossEntropyLoss()
+        criterion = nn.BCEWithLogitsLoss()
     elif loss_fn == 'bcef_2way':
         criterion = BCEFocal2WayLoss()
     elif loss_fn == 'focal_clip_max':
         criterion = BCEFocalLoss(output_dict=True, clip_max=True)
     elif loss_fn == 'focal_clip_max_v2':
         criterion = BCEFocalLoss_v2(output_dict=True, clip_max=True)
+    elif loss_fn == 'bce_clip_max_v2':
+        criterion = BCELossV2(output_dict=True, clip_max=True)
+    elif loss_fn == 'bce_output':
+        criterion = BinaryCrossEntropyLossWithOutput()
     else:
         message = "loss function not found"
         logger.error(message)
@@ -43,6 +47,13 @@ class BinaryCrossEntropyLoss(nn.Module):
         super().__init__()
     def forward(self, preds, targets):
         ce_loss = nn.BCEWithLogitsLoss()(preds['clipwise_logit'], targets)
+        return ce_loss
+    
+class BinaryCrossEntropyLossWithOutput(nn.Module):
+    def __init__(self,):
+        super().__init__()
+    def forward(self, preds, targets):
+        ce_loss = nn.BCEWithLogitsLoss()(torch.logit(preds['clipwise_output']), targets)
         return ce_loss
 
 # https://www.kaggle.com/c/rfcx-species-audio-detection/discussion/213075
@@ -102,6 +113,24 @@ class BCEFocalLoss_v2(nn.Module):
             loss = loss + 0.5 * loss_clip_max
         loss = loss.mean()
         return loss
+    
+    
+class BCELossV2(nn.Module):
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False):
+        super().__init__()
+        self.output_dict = output_dict
+        self.clip_max = clip_max
+
+    def forward(self, preds, targets):
+        if self.output_dict == True:
+            if self.clip_max==True:
+                preds_clip_max = preds["framewise_logit"].max(1)[0]
+            preds = torch.logit(preds['clipwise_output'])
+        bce_loss = nn.BCEWithLogitsLoss()(preds, targets)
+        if self.clip_max == True:
+            bce_loss_clip_max = nn.BCEWithLogitsLoss()(preds_clip_max, targets)
+            bce_loss = bce_loss + 0.5 * bce_loss_clip_max
+        return bce_loss
     
 class BCEFocal2WayLoss(nn.Module):
     def __init__(self, weights=[1, 1], class_weights=None):
