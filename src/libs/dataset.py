@@ -110,11 +110,11 @@ class BirdClefDataset(Dataset):
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
         
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
-        labels[target] += 0.999
+        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
+        labels[target] += 0.9999
         for slabel in eval(meta['secondary_labels']):
             if slabel in self.bird_label_dict.keys():
-                labels[self.bird_label_dict[slabel]] += 0.299
+                labels[self.bird_label_dict[slabel]] += 0.2999
         
         sound_size = int(self.duration//5)
         if self.split == 'train':
@@ -203,6 +203,7 @@ class BirdClefDataset(Dataset):
         sample = {
             "sound": sound,
             "target": labels,
+            "rating": meta['rating']
         }
 
         return sample
