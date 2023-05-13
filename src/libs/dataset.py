@@ -28,7 +28,9 @@ def get_dataloader(
     transform: Optional[transforms.Compose] = None,
     bird_label_map:dict = None,
     aug_list:List = [],
-    duration:int = 5
+    duration:int = 5,
+    cleaning_path : str = '',
+    result_path : str = ''
 ) -> DataLoader:
 
     if split not in ["train", "val", "test"]:
@@ -82,13 +84,15 @@ class BirdClefDataset(Dataset):
         split:str = 'train',
         aug_list:List = [],
         duration:int = 5,
+        cleaning_path:str = '',
+        result_path = ''
     ) -> None:
         super().__init__()
 
         self.files = files
         self.transform = transform
         self.bird_label_dict = bird_label_map
-        self.df_meta = self.get_metadata()
+        self.df_meta = BirdClefDataset.get_metadata()
         self.split = split
         self.aug_list = aug_list
         if 'soundscape' in self.aug_list:
@@ -99,6 +103,9 @@ class BirdClefDataset(Dataset):
             self.soundscape_df = self.soundscape_df.reset_index(drop=True)
             logger.info(f"the number of soundscape sound images:{self.soundscape_df.shape[0]}")
         self.duration = duration
+        self.cleaning_path = cleaning_path
+        self.result_path = result_path
+        
         logger.info(f"the number of samples: {len(self.files)}")
         logger.info(f'augmentation list:{self.aug_list}')
 
@@ -110,11 +117,33 @@ class BirdClefDataset(Dataset):
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
         
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
-        labels[target] += 0.9999
-        for slabel in eval(meta['secondary_labels']):
-            if slabel in self.bird_label_dict.keys():
-                labels[self.bird_label_dict[slabel]] += 0.2999
+        if len(self.cleaning_path) > 0:
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+            oof_train = pd.read_csv(os.path.join(self.result_path, 'train_oof.csv'))
+            oof_pred = oof_train[oof_train['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+            if oof_pred[target]>0.5:
+                labels[target] += 1.0
+            elif oof_pred[target] > 0.1:
+                labels[target] += 0.9975
+            elif oof_pred[target] > 0.01:
+                labels[target] += 0.5
+            else:
+                labels[target] += 0.2
+            for slabel in eval(oof_pred['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():   
+                    if oof_pred[slabel]>0.5:
+                        labels[slabel] = 0.9975
+                    elif oof_pred[slabel] > 0.1:
+                        labels[slabel] = 0.8
+                    else:
+                        labels[slabel] = 0.0025
+
+        else:
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
+            labels[target] += 0.9999
+            for slabel in eval(meta['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():
+                    labels[self.bird_label_dict[slabel]] += 0.2999
         
         sound_size = int(self.duration//5)
         if self.split == 'train':
@@ -208,7 +237,8 @@ class BirdClefDataset(Dataset):
 
         return sample
     
-    def get_metadata(self):
+    @staticmethod
+    def get_metadata():
         df_2023 = pd.read_csv('../data/train_metadata.csv')
         df_2021 = pd.read_csv('../data_2021/train_metadata.csv')
         df_2022 = pd.read_csv('../data_2022/train_metadata.csv')

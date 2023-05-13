@@ -16,6 +16,7 @@ from libs.loss_fn import get_criterion
 from libs.helper import train, evaluate
 from libs.seed import set_seed
 from libs.get_augmentatoins import get_augmentations
+from libs.dataset import BirdClefDataset
 
 import os
 import math
@@ -139,36 +140,9 @@ def main():
         # birds = [record_path.split('/')[-2] for record_path in train_files] + [record_path.split('/')[-2] for record_path in val_files]
         # birds = list(set(birds)) 
         birds = birds_2021_2022
-        
-
+    
     bird_label_map = {birds[i]:i for i in range(len(birds))}
-    train_loader = get_dataloader(
-        files = train_files,
-        batch_size=config.batch_size,
-        split='train',
-        num_workers=2,
-        pin_memory=True,
-        drop_last=True,
-        transform=None,
-        bird_label_map = bird_label_map,
-        shuffle=True,
-        aug_list=get_augmentations(config.aug_ver),
-        duration=config.duration,
-    )
-
-    val_loader = get_dataloader(
-        files = val_files,
-        batch_size=config.batch_size,
-        split='val',
-        num_workers=2,
-        pin_memory=True,
-        drop_last=False,
-        transform=None,
-        bird_label_map = bird_label_map,
-        shuffle=False,
-        aug_list=[],
-        duration=config.duration
-    )
+    
     if "2021_2022" in config.model_path:
         base_path = '/'.join(args.config.split('/')[:-2])
         pretrained_path = os.path.join(base_path, config.model_path, 'best_model.prm')
@@ -182,10 +156,7 @@ def main():
             config.model,
             output_dim=len(birds)
         )
-    
-    model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr = config.lr_max)
-    
+        
     if args.use_wandb:
         wandb.init(
             name=experiment_name,
@@ -196,7 +167,10 @@ def main():
         )
         # Magic
         wandb.watch(model, log="all")
-    
+        
+    model.to(device)
+    optimizer = optim.Adam(model.parameters(), lr = config.lr_max)
+
     # ToDo: Schedulerの作成
     if config.scheduler == 'CosineAnnealingLR':
         scheduler = CosineAnnealingLR(optimizer=optimizer, T_max=config.max_epoch, eta_min=config.lr_min, last_epoch=-1)
@@ -206,6 +180,178 @@ def main():
     # criterion for loss
     criterion = get_criterion(loss_fn = config.loss_fn)
     begin_epoch = 0
+
+        
+    if config.make_train_oof == True:
+        oof_df = pd.DataFrame()
+        is_done = os.path.isfile(os.path.join(result_path, 'train_oof.csv'))
+        all_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
+        all_df['filename'] = np.concatenate([train_files, val_files], 0)
+        all_df['primary_label'] = all_df['filename'].apply(lambda x: x.split('/')[-2])
+        all_df['soundname'] = all_df['filename'].map(lambda x: os.path.join(x.split('/')[-2], x.split('/')[-1])[:-4])
+        meta_df = BirdClefDataset.get_metadata()
+        all_df = all_df.merge(meta_df, on='soundname', how='left')
+        all_df[birds] = 0
+        
+        kf = StratifiedKFold(n_splits=config.n_split, random_state=args.seed, shuffle=True)
+        
+        for fold, (train_index, val_index) in enumerate(kf.split(all_df, y=all_df['primary_label'])):
+            
+            train_files = list(all_df.iloc[train_index]['filename'].values)
+            val_files = list(all_df.iloc[val_index]['filename'].values)
+            fold_df = all_df.iloc[val_index]
+            
+            train_loader = get_dataloader(
+                files = train_files,
+                batch_size=config.batch_size,
+                split='train',
+                num_workers=2,
+                pin_memory=True,
+                drop_last=True,
+                transform=None,
+                bird_label_map = bird_label_map,
+                shuffle=True,
+                aug_list=get_augmentations(config.aug_ver),
+                duration=config.duration,
+                cleaning_path=False,
+                result_path=result_path
+            )
+
+            val_loader = get_dataloader(
+                files = val_files,
+                batch_size=config.batch_size,
+                split='val',
+                num_workers=2,
+                pin_memory=True,
+                drop_last=False,
+                transform=None,
+                bird_label_map = bird_label_map,
+                shuffle=False,
+                aug_list=[],
+                duration=config.duration,
+                cleaning_path=False,
+                result_path=result_path
+            )         
+                      
+            if is_done == False:
+                logger.info(f'Start training')
+                best_score = 0
+                best_epoch = 0
+                for epoch in range(begin_epoch, config.max_epoch):
+                    start = time.time()
+                    train_loss, gts, preds, train_score = train(
+                        train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup
+                    )
+                    train_time = int(time.time()-start)
+                    
+                    start = time.time()
+                    val_loss, val_gts, val_preds, val_score = evaluate(
+                        val_loader, model, criterion, device, do_mixup=False
+                    )
+                    val_time = int(time.time() - start)
+                    if val_score > best_score:
+                        best_preds = val_preds
+                        best_score = val_score
+                        best_epoch = epoch
+                        torch.save(model.state_dict(), os.path.join(result_path, f'best_model.prm'))
+                        
+                    train_logger.update(
+                        epoch,
+                        optimizer.param_groups[0]["lr"],
+                        train_time,
+                        train_loss,
+                        train_score,
+                        val_time,
+                        val_loss,
+                        val_score,
+                    )
+
+                    # save logs to wandb
+                    if args.use_wandb:
+                        wandb.log(
+                            {
+                                f"lr": optimizer.param_groups[0]["lr"],
+                                f"train_time[sec]": train_time,
+                                f"train_loss": train_loss,
+                                f"val_time[sec]": val_time,
+                                f"val_loss": val_loss,
+                                f"val_score": val_score
+                            },
+                            step=epoch,
+                        )
+                    if epoch > best_epoch + config.early_stop_epoch:
+                        break
+                    
+                torch.save(model.state_dict(), os.path.join(result_path, f'fold{fold}_final_model.prm'))   
+                logger.info(f'fold_{fold}_best score:{best_score}')
+                fold_df[birds] = best_preds   
+                oof_df = pd.concat([oof_df, fold_df])
+                
+        else:
+            model_path = os.path.join(result_path, f'fold_{fold}_best_model.prm')
+            logger.info(model_path)
+            model.load_state_dict(torch.load(model_path))
+            val_loss, val_gts, best_preds, best_score = evaluate(
+                    val_loader, model, criterion, device, do_mixup=False
+            )
+            val_score = best_score
+            logger.info(f'fold{fold}_best score:{best_score}')
+                
+            
+        wandb.finish()
+        del train_loader, val_loader
+        gc.collect()
+        final_result = pd.DataFrame(columns=['final_score','best_score'])
+        logger.info(f"Final score:{val_score}")
+        logger.info(f"Best score:{best_score}")
+        tmp = pd.Series(
+                [val_score, best_score],
+                index=['final_score','best_score'],
+            )
+        final_result = final_result.append(tmp,ignore_index=True)
+        final_result.to_csv(os.path.join(result_path, f'fold_{fold}_final_result.csv'), index=False)
+        oof_df.sort_index().to_csv(os.path.join(result_path, 'train_oof.csv'), index=False)
+        logger.info('Make oof_pred Done !')   
+    
+    if config.cleaning_path == '':
+        cleaning_path = result_path
+    elif config.cleaning_path == 'False':
+        cleaning_path = ''
+    else:
+        cleaning_path = config.cleaning_path
+        
+    train_loader = get_dataloader(
+        files = train_files,
+        batch_size=config.batch_size,
+        split='train',
+        num_workers=2,
+        pin_memory=True,
+        drop_last=True,
+        transform=None,
+        bird_label_map = bird_label_map,
+        shuffle=True,
+        aug_list=get_augmentations(config.aug_ver),
+        duration=config.duration,
+        cleaning_path=config.cleaning_path,
+        result_path=result_path
+    )
+
+    val_loader = get_dataloader(
+        files = val_files,
+        batch_size=config.batch_size,
+        split='val',
+        num_workers=2,
+        pin_memory=True,
+        drop_last=False,
+        transform=None,
+        bird_label_map = bird_label_map,
+        shuffle=False,
+        aug_list=[],
+        duration=config.duration,
+        cleaning_path=config.cleaning_path,
+        result_path=result_path
+    )
+
     is_done = (os.path.isfile(os.path.join(result_path, f'final_model.prm'))) | (os.path.isfile(os.path.join(result_path, f'final_model_.prm')))
     oof_df = pd.DataFrame(columns  = ['filename', 'primary_label'] + birds)
     oof_df['filename'] = val_files
@@ -286,7 +432,8 @@ def main():
     final_result = final_result.append(tmp,ignore_index=True)
     final_result.to_csv(os.path.join(result_path, 'final_result.csv'), index=False)
     oof_df.to_csv(os.path.join(result_path, 'oof_df.csv'), index=False)
-    logger.info('ALL Done !')
+    logger.info('ALL Done !')     
+        
     
 if __name__ == '__main__':
     main()
