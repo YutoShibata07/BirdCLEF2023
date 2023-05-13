@@ -55,7 +55,7 @@ class BCEFocalLoss(nn.Module):
         self.output_dict = output_dict
         self.clip_max = clip_max
 
-    def forward(self, preds, targets):
+    def forward(self, preds, targets, rating):
         if self.output_dict == True:
             if self.clip_max==True:
                 preds_clip_max = preds["framewise_logit"].max(1)[0]
@@ -72,7 +72,10 @@ class BCEFocalLoss(nn.Module):
                 (1. - probas)**self.gamma * bce_loss_clip_max + \
                 (1. - targets) * probas**self.gamma * bce_loss_clip_max
             loss = loss + 0.5 * loss_clip_max
+        loss = loss.mean(axis=1)
+        # loss = loss * (0.7 + 0.3 * rating / 5.0)
         loss = loss.mean()
+        
         return loss
     
 class BCEFocalLoss_v2(nn.Module):
@@ -83,7 +86,7 @@ class BCEFocalLoss_v2(nn.Module):
         self.output_dict = output_dict
         self.clip_max = clip_max
 
-    def forward(self, preds, targets):
+    def forward(self, preds, targets, rating):
         if self.output_dict == True:
             if self.clip_max==True:
                 preds_clip_max = preds["framewise_logit"].max(1)[0]
@@ -93,6 +96,7 @@ class BCEFocalLoss_v2(nn.Module):
         loss = targets * self.alpha * \
             (1. - probas)**self.gamma * bce_loss + \
             (1. - targets) * probas**self.gamma * bce_loss
+
         if self.clip_max == True:
             bce_loss_clip_max = nn.BCEWithLogitsLoss(reduction='none')(preds_clip_max, targets)
             probas = torch.sigmoid(preds_clip_max)
@@ -100,7 +104,10 @@ class BCEFocalLoss_v2(nn.Module):
                 (1. - probas)**self.gamma * bce_loss_clip_max + \
                 (1. - targets) * probas**self.gamma * bce_loss_clip_max
             loss = loss + 0.5 * loss_clip_max
+        loss = loss.mean(axis=1)
+        # loss = loss * (0.7 + 0.3 * rating / 5.0)        
         loss = loss.mean()
+        
         return loss
     
 class BCEFocal2WayLoss(nn.Module):
@@ -112,16 +119,16 @@ class BCEFocal2WayLoss(nn.Module):
 
         self.weights = weights
 
-    def forward(self, input, target):
+    def forward(self, input, target, rating):
         input_ = input["logit"]
         target = target.float()
-
         framewise_output = input["framewise_logit"]
         clipwise_output_with_max, _ = framewise_output.max(dim=1)
 
         loss = self.focal(input_, target)
         aux_loss = self.focal(clipwise_output_with_max, target)
         loss_sum = self.aw_loss(loss, aux_loss)
+        loss_sum = loss + 0.5 * loss_sum
         return loss_sum
 
         return self.weights[0] * loss + self.weights[1] * aux_loss

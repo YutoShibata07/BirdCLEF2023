@@ -49,16 +49,17 @@ def do_one_iteration(
 
     x = sample['sound'].to(device).float()
     t = sample['target'].to(device)
-    
+    rating = sample['rating'].to(device)
 
     batch_size = x.shape[0]
     output = model(x)
     if (do_mixup==True) & (np.random.rand() > 0.5):
-        mixed_x, y_a, y_b, lam = mixup.mixup_data(x, t)
+        mixed_x, y_a, y_b, lam, = mixup.mixup_data(x, t)
         output = model(mixed_x)
-        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam)
+        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam, rating)
     else:
-        loss = criterion(output, t)
+        loss = criterion(output, t, rating)
+
     if iter_type == "train" and optimizer is not None:
         # compute gradient and do SGD step
         optimizer.zero_grad()
