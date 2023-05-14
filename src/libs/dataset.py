@@ -90,6 +90,7 @@ class BirdClefDataset(Dataset):
         self.bird_label_dict = bird_label_map
         self.split = split
         self.aug_list = aug_list
+        self.df_meta = self.get_metadata()
         if 'soundscape' in self.aug_list:
             self.soundscape_df = pd.read_csv('../data_2021/train_soundscape_labels.csv')
             self.soundscape_df = self.soundscape_df[self.soundscape_df.birds=='nocall']
@@ -103,12 +104,24 @@ class BirdClefDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.files)
-
-    def __getitem__(self, idx: int):
+    
+    def get_metadata(self):
+        df_2023 = pd.read_csv('../data/train_metadata.csv')
+        df_2021 = pd.read_csv('../data_2021/train_metadata.csv')
+        df_2022 = pd.read_csv('../data_2022/train_metadata.csv')
+        df_2020 = pd.read_csv('../data_2020/train_extended.csv')
+        df_2023['soundname'] = df_2023['filename'].map(lambda x: x[:-4])
+        df_2022['soundname'] = df_2022['filename'].map(lambda x: x[:-4])
+        df_2021['soundname'] = df_2021.primary_label + '/' + df_2021['filename'].map(lambda x: x[:-4])
+        df_2020['soundname'] = df_2020.ebird_code + '/' + df_2020['filename'].map(lambda x:x.split('.')[0])
+        df_2023 = df_2023[['soundname', 'rating', 'secondary_labels']]
+        df_2022 = df_2022[['soundname', 'rating', 'secondary_labels']]
+        df_2021 = df_2021[['soundname', 'rating', 'secondary_labels']]
+        df_2020 = df_2020[['soundname', 'rating', 'secondary_labels']]
+        return pd.concat([df_2020, df_2021, df_2022, df_2023], axis=0)
+    
+    def get_sound(self, idx: int):
         sound = np.load(self.files[idx])
-        target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-        labels[target] = 1.0
         sound_size = int(self.duration//5)
         if self.split == 'train':
             start_idx = np.random.choice(sound.shape[0])
@@ -116,11 +129,32 @@ class BirdClefDataset(Dataset):
             start_idx = 0
         if start_idx + sound_size > sound.shape[0]:
             pad_size = start_idx+sound_size-sound.shape[0]
+            # 10秒だと仮定
+            # sound = np.concatenate([sound[start_idx:], sound[start_idx:]], axis=-1)
             sound = np.concatenate([sound[start_idx:], np.zeros((pad_size, sound.shape[1], sound.shape[2]))])
         else:
             sound = sound[start_idx:start_idx+sound_size, :, :]
         sound = sound.transpose(0, 2, 1)
         sound = sound.reshape([-1, sound.shape[-1]]).T
+        return sound
+    
+    def __getitem__(self, idx: int):
+        target = self.bird_label_dict[self.files[idx].split('/')[-2]]
+        # labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+        # labels[target] = 1.0
+        sound_size = int(self.duration//5)
+        meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
+        labels[target] += 0.999
+        for slabel in eval(meta['secondary_labels']):
+            if slabel in self.bird_label_dict.keys():
+                labels[self.bird_label_dict[slabel]] += 0.299
+        sound = self.get_sound(idx)
+        if (self.split=='train') & (np.random.rand() > 0.75):
+            sound2 = self.get_sound(idx)
+            ratio = np.random.rand()
+            sound = librosa.db_to_power(sound) * ratio + librosa.db_to_power(sound2) * (1 - ratio)
+            sound = librosa.power_to_db(sound)
         if self.split == 'train':
             if ('reverberation' in self.aug_list) & (np.random.rand() > 0.5):
                 sound_p = librosa.db_to_power(sound)
@@ -155,7 +189,7 @@ class BirdClefDataset(Dataset):
                 # 12.5%の確率でnocallとする
                 if np.random.rand() > 0.75:
                     sound = soundscapes.copy()
-                    labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+                    labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
                     labels[-1] = 1.0
                 else:
                     ratio = 0.5 * np.random.rand()

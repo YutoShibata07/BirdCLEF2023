@@ -65,7 +65,8 @@ def get_val_files(dataset_dir:str='', input_feature:str = 'logmel'):
     assert len(files_2023) == 16941
     species_2021 = glob.glob(os.path.join('../dataset_2021', input_feature,'*'))
     species_2022 = glob.glob(os.path.join('../dataset_2022', input_feature,'*'))
-    all_species = np.concatenate([species_2021,species_2022])
+    species_2020 = glob.glob(os.path.join('../dataset_2020', input_feature,'*'))
+    all_species = np.concatenate([species_2020, species_2021,species_2022])
     # print(all_species)
     train_files = []
     val_files = []

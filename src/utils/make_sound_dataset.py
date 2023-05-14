@@ -176,6 +176,9 @@ def main() -> None:
     meta_df = pd.read_csv(args.meta_path)
     if '2021' in args.sound_dir:
         meta_df['filename'] = meta_df['primary_label'].str.cat(meta_df['filename'], sep='/')
+    elif '2020' in args.sound_dir:
+        meta_df['filename'] = meta_df['filename'].apply(lambda x:x.split('.')[0] + '.ogg')
+        meta_df['filename'] = meta_df['ebird_code'].str.cat(meta_df['filename'], sep='/')
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
     feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
     filepath_list = meta_df['filename']
