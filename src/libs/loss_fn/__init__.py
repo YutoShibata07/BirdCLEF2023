@@ -34,14 +34,14 @@ def get_criterion(
 class CrossEntropyLoss(nn.Module):
     def __init__(self,):
         super().__init__()
-    def forward(self, preds, targets):
+    def forward(self, preds, targets, rating):
         ce_loss = nn.CrossEntropyLoss()(preds['clipwise_logit'], targets)
         return ce_loss
     
 class BinaryCrossEntropyLoss(nn.Module):
     def __init__(self,):
         super().__init__()
-    def forward(self, preds, targets):
+    def forward(self, preds, targets, rating):
         ce_loss = nn.BCEWithLogitsLoss()(preds['clipwise_logit'], targets)
         return ce_loss
 
