@@ -130,13 +130,9 @@ class BirdClefDataset(Dataset):
         df_2020 = df_2020[['soundname', 'rating', 'secondary_labels']]
         return pd.concat([df_2020, df_2021, df_2022, df_2023], axis=0)
     
-    def get_sound(self, idx: int):
-        sound = np.load(self.files[idx])
+    def get_sound(self, file_idx: int, start_idx:int = None):
+        sound = np.load(self.files[file_idx])
         sound_size = int(self.duration//5)
-        if self.split == 'train':
-            start_idx = np.random.choice(sound.shape[0])
-        else:
-            start_idx = 0
         if start_idx + sound_size > sound.shape[0]:
             pad_size = start_idx+sound_size-sound.shape[0]
             # 10秒だと仮定
@@ -149,19 +145,54 @@ class BirdClefDataset(Dataset):
         return sound
     
     def __getitem__(self, idx: int):
+        if self.split == 'train':
+            sound = np.load(self.files[idx])
+            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
+        else:
+            #検証データは "_{second}.npy"となっている
+            sound = np.load(self.files[idx].split('_')[-2] + '.npy')
+            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        # labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-        # labels[target] = 1.0
+        meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
+        
+        if len(self.cleaning_path) > 0:
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+            # ファイルごとにtrain, valを分けているのでoof_trainに絞らなくても良い
+            oof = pd.read_csv(os.path.join(self.cleaning_path, 'oof.csv'))
+            oof_pred = oof[oof['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+            if oof_pred[target]>0.5:
+                labels[target] += 1.0
+            elif oof_pred[target] > 0.1:
+                labels[target] += 0.9975
+            elif oof_pred[target] > 0.01:
+                labels[target] += 0.5
+            else:
+                labels[target] += 0.2
+            for slabel in eval(oof_pred['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():   
+                    if oof_pred[slabel]>0.5:
+                        labels[slabel] = 0.9975
+                    elif oof_pred[slabel] > 0.1:
+                        labels[slabel] = 0.8
+                    else:
+                        labels[slabel] = 0.0025
+
+        else:
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
+            labels[target] += 0.9999
+            for slabel in eval(meta['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():
+                    labels[self.bird_label_dict[slabel]] += 0.2999
         sound_size = int(self.duration//5)
-        meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
-        labels[target] += 0.999
-        for slabel in eval(meta['secondary_labels']):
-            if slabel in self.bird_label_dict.keys():
-                labels[self.bird_label_dict[slabel]] += 0.299
-        sound = self.get_sound(idx)
+        if self.split == 'train':
+            start_idx = np.random.choice(sound.shape[0])
+        else:
+            start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
+        
+        sound = self.get_sound(file_idx = idx, start_idx=start_idx)
+        # intra mixup
         if (self.split=='train') & (np.random.rand() > 0.75):
-            sound2 = self.get_sound(idx)
+            sound2 = self.get_sound(file_idx=idx, start_idx=np.random.choice(sound.shape[0]))
             ratio = np.random.rand()
             sound = librosa.db_to_power(sound) * ratio + librosa.db_to_power(sound2) * (1 - ratio)
             sound = librosa.power_to_db(sound)

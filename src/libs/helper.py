@@ -13,18 +13,26 @@ from torch.utils.data import DataLoader
 
 from libs.meter import AverageMeter, ProgressMeter
 from libs.metric import padded_cmap, padded_cmap_numpy
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import (
+    CosineAnnealingWarmRestarts,
+    CosineAnnealingLR,
+    ReduceLROnPlateau,
+)
 from libs.loss_fn import mixup
+
 __all__ = ["train", "evaluate"]
 
 logger = getLogger(__name__)
 
+
 def softmax(x):
     u = np.sum(np.exp(x), axis=-1)
-    return np.exp(x)/u.reshape(-1, 1)
+    return np.exp(x) / u.reshape(-1, 1)
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 
 def do_one_iteration(
     sample: List,
@@ -33,8 +41,8 @@ def do_one_iteration(
     device: str,
     iter_type: str,
     optimizer: Optional[optim.Optimizer] = None,
-    scheduler = None,
-    do_mixup:bool = False
+    scheduler=None,
+    do_mixup: bool = False,
 ) -> Tuple[int, float, float, np.ndarray, np.ndarray]:
 
     if iter_type not in ["train", "evaluate"]:
@@ -47,18 +55,24 @@ def do_one_iteration(
         logger.error(message)
         raise ValueError(message)
 
-    x = sample['sound'].to(device).float()
-    t = sample['target'].to(device)
-    
+    x = sample["sound"].to(device).float()
+    t = sample["target"].to(device)
+    rating = sample["rating"].to(device)
 
     batch_size = x.shape[0]
     output = model(x)
-    if (do_mixup==True) & (np.random.rand() > 0.5):
-        mixed_x, y_a, y_b, lam = mixup.mixup_data(x, t)
+    if (do_mixup == True) & (np.random.rand() > 0.5):
+        (
+            mixed_x,
+            y_a,
+            y_b,
+            lam,
+        ) = mixup.mixup_data(x, t)
         output = model(mixed_x)
-        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam)
+        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam, rating)
     else:
-        loss = criterion(output, t)
+        loss = criterion(output, t, rating)
+
     if iter_type == "train" and optimizer is not None:
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -66,8 +80,10 @@ def do_one_iteration(
         optimizer.step()
 
     # keep predicted results and gts for calculate F1 Score
-    gt = t.to('cpu').detach().argmax(dim=1).numpy()
-    pred = output['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
+    gt = t.to("cpu").detach().argmax(dim=1).numpy()
+    pred = (
+        output["clipwise_output"].to("cpu").detach().numpy()
+    )  # [batch_size, bin_num * bin_num]
     return batch_size, loss.item(), gt, pred
 
 
@@ -76,11 +92,11 @@ def train(
     model: nn.Module,
     criterion: Any,
     optimizer: optim.Optimizer,
-    scheduler, 
+    scheduler,
     epoch: int,
     device: str,
     interval_of_progress: int = 50,
-    do_mixup:bool = False,
+    do_mixup: bool = False,
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
 
     batch_time = AverageMeter("Time", ":6.3f")
@@ -107,7 +123,14 @@ def train(
         data_time.update(time.time() - end)
 
         batch_size, loss, gt, pred = do_one_iteration(
-            sample, model, criterion, device, "train", optimizer, scheduler = scheduler, do_mixup=do_mixup
+            sample,
+            model,
+            criterion,
+            device,
+            "train",
+            optimizer,
+            scheduler=scheduler,
+            do_mixup=do_mixup,
         )
 
         losses.update(loss, batch_size)
@@ -126,14 +149,14 @@ def train(
             progress.display(i)
 
     if isinstance(scheduler, CosineAnnealingLR):
-            scheduler.step()
+        scheduler.step()
     # calculate F1 Score
     # f1s = f1_score(gts, preds, average="macro")
     gts = np.array(gts)
     preds = np.array(preds)
     # preds = softmax(preds)
     preds = sigmoid(preds)
-    score = padded_cmap_numpy(predictions=preds, gts = gts)
+    score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score
 
@@ -143,20 +166,20 @@ def evaluate(
     model: nn.Module,
     criterion: Any,
     device: str,
-    do_mixup:bool = False,
+    do_mixup: bool = False,
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
     losses = AverageMeter("Loss", ":.4e")
 
     # keep predicted results and gts for calculate F1 Score
     gts = []
     preds = []
-    
+
     # switch to evaluate mode
     model.eval()
 
     with torch.no_grad():
         for sample in loader:
-            
+
             batch_size, loss, gt, pred = do_one_iteration(
                 sample, model, criterion, device, "evaluate", do_mixup=do_mixup
             )
@@ -173,6 +196,6 @@ def evaluate(
     preds = np.array(preds)[:,:-1]
     # preds = softmax(preds)
     preds = sigmoid(preds)
-    score = padded_cmap_numpy(predictions=preds, gts = gts)
+    score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score

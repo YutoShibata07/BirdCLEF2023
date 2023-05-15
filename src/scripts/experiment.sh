@@ -1,10 +1,10 @@
-export CUDA_VISIBLE_DEVICES=0
+export CUDA_VISIBLE_DEVICES=1
 
 python utils/get_val_files.py
-# python utils/make_config.py --batch_size 32 --lr_max 1e-3 --lr_min 1e-5  --max_epoch 30 --model bird_sed bird_sed --do_mixup True  --aug_ver 6 6 --loss_fn focal_clip_max focal_clip_max --duration 10 10
+python utils/make_config.py --batch_size 32 --lr_max 1e-3 --lr_min 1e-5  --max_epoch 30 --model bird_sed bird_sed --do_mixup True  --aug_ver 4 4 --loss_fn focal_clip_max focal_clip_max --duration 10 10 --model_path exp064_sed_2021_2022 exp064_sed_2021_2022
 # 鳥なしデータ生成
 python utils/make_sound_dataset_soundscape.py
-files="../result/*exp056_loss_fn=focal_clip_max-aug_ver=4-duration=10-model_path=model=bird_sed-training_year=2021_2022-loss_fn=focal_clip_max-aug_ver=4-duration=10"
+files="../result/*exp064_sed_2021_2022*"
 for filepath in $files; do
     if [ -d $filepath ] ; then
         flag="${filepath}/final_model.prm"
