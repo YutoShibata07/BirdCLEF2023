@@ -144,6 +144,7 @@ def main():
         birds = birds_2021_2022
     
     bird_label_map = {birds[i]:i for i in range(len(birds))}
+    bird_label_map['nocall'] = 264
     oof_df = pd.DataFrame()
     all_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
     all_df['filename'] = np.concatenate([train_files, val_files], 0)
@@ -165,17 +166,21 @@ def main():
     for fold, (train_index, val_index) in enumerate(kf.split(all_df, y=all_df['primary_label'])):
         # モデルを毎回リセット
         if "2021_2022" in config.model_path:
+            if '2020' in config.model_path:
+                past_birds = birds_2020_2021_2022
+            else:
+                past_birds = birds_2021_2022
             base_path = '/'.join(args.config.split('/')[:-2])
             pretrained_path = os.path.join(base_path, config.model_path, 'best_model.prm')
             model = get_model(
                 config.model,
-                output_dim=len(birds_2021_2022),
+                output_dim=len(past_birds) + 1,
                 pretrained_path=pretrained_path
             )
         else:
             model = get_model(
                 config.model,
-                output_dim=len(birds)
+                output_dim=len(birds) + 1
             )
             
         if args.use_wandb:

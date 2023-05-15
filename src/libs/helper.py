@@ -69,9 +69,9 @@ def do_one_iteration(
             lam,
         ) = mixup.mixup_data(x, t)
         output = model(mixed_x)
-        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam, rating)
+        loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam)
     else:
-        loss = criterion(output, t, rating)
+        loss = criterion(output, t)
 
     if iter_type == "train" and optimizer is not None:
         # compute gradient and do SGD step
@@ -195,7 +195,7 @@ def evaluate(
     # 検証データはnocall labelなし
     preds = np.array(preds)[:,:-1]
     # preds = softmax(preds)
-    preds = sigmoid(preds)
+    # preds = sigmoid(preds)
     score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score

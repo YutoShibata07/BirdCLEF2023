@@ -38,14 +38,15 @@ def get_dataloader(
     transform: Optional[transforms.Compose] = None,
     bird_label_map:dict = None,
     aug_list:List = [],
-    duration:int = 5
+    duration:int = 5,
+    cleaning_path :str = '',
 ) -> DataLoader:
 
     if split not in ["train", "val", "test"]:
         message = "split should be selected from ['train', 'val', 'test']."
         logger.error(message)
         raise ValueError(message)
-    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration)
+    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration, cleaning_path=cleaning_path)
     dataloader = DataLoader(
         data,
         batch_size=batch_size,
@@ -92,6 +93,7 @@ class BirdClefDataset(Dataset):
         split:str = 'train',
         aug_list:List = [],
         duration:int = 5,
+        cleaning_path:str = '',
     ) -> None:
         super().__init__()
 
@@ -109,13 +111,15 @@ class BirdClefDataset(Dataset):
             self.soundscape_df = self.soundscape_df.reset_index(drop=True)
             logger.info(f"the number of soundscape sound images:{self.soundscape_df.shape[0]}")
         self.duration = duration
+        self.cleaning_path = cleaning_path
         logger.info(f"the number of samples: {len(self.files)}")
         logger.info(f'augmentation list:{self.aug_list}')
 
     def __len__(self) -> int:
         return len(self.files)
     
-    def get_metadata(self):
+    @staticmethod
+    def get_metadata():
         df_2023 = pd.read_csv('../data/train_metadata.csv')
         df_2021 = pd.read_csv('../data_2021/train_metadata.csv')
         df_2022 = pd.read_csv('../data_2022/train_metadata.csv')
@@ -130,9 +134,11 @@ class BirdClefDataset(Dataset):
         df_2020 = df_2020[['soundname', 'rating', 'secondary_labels']]
         return pd.concat([df_2020, df_2021, df_2022, df_2023], axis=0)
     
-    def get_sound(self, file_idx: int, start_idx:int = None):
-        sound = np.load(self.files[file_idx])
+    def get_sound(self, file_path: int, start_idx:int = None):
+        sound = np.load(file_path)
         sound_size = int(self.duration//5)
+        if start_idx == None:
+            start_idx = np.random.choice(sound.shape[0])
         if start_idx + sound_size > sound.shape[0]:
             pad_size = start_idx+sound_size-sound.shape[0]
             # 10秒だと仮定
@@ -146,11 +152,12 @@ class BirdClefDataset(Dataset):
     
     def __getitem__(self, idx: int):
         if self.split == 'train':
-            sound = np.load(self.files[idx])
+            sound = self.get_sound(self.files[idx])
             tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
         else:
             #検証データは "_{second}.npy"となっている
-            sound = np.load(self.files[idx].split('_')[-2] + '.npy')
+            start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
+            sound = self.get_sound(self.files[idx].split('_')[-2] + '.npy', start_idx=start_idx)
             tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
@@ -183,16 +190,11 @@ class BirdClefDataset(Dataset):
             for slabel in eval(meta['secondary_labels']):
                 if slabel in self.bird_label_dict.keys():
                     labels[self.bird_label_dict[slabel]] += 0.2999
-        sound_size = int(self.duration//5)
-        if self.split == 'train':
-            start_idx = np.random.choice(sound.shape[0])
-        else:
-            start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
         
-        sound = self.get_sound(file_idx = idx, start_idx=start_idx)
+        sound_size = int(self.duration//5)
         # intra mixup
         if (self.split=='train') & (np.random.rand() > 0.75):
-            sound2 = self.get_sound(file_idx=idx, start_idx=np.random.choice(sound.shape[0]))
+            sound2 = self.get_sound(self.files[idx])
             ratio = np.random.rand()
             sound = librosa.db_to_power(sound) * ratio + librosa.db_to_power(sound2) * (1 - ratio)
             sound = librosa.power_to_db(sound)
@@ -285,6 +287,7 @@ class BirdClefDataset(Dataset):
         sample = {
             "sound": sound,
             "target": labels,
+            "rating": meta['rating'],
         }
 
         return sample
