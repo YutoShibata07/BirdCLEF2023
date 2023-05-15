@@ -16,6 +16,16 @@ __all__ = ["get_dataloader"]
 
 logger = getLogger(__name__)
 
+import albumentations as A
+
+def get_train_transform():
+    return A.Compose([
+        A.OneOf([
+                A.Cutout(max_h_size=5, max_w_size=8),
+                A.CoarseDropout(max_holes=4),
+            ], p=0.5),
+    ])
+
 
 def get_dataloader(
     files:List,
@@ -211,11 +221,19 @@ class BirdClefDataset(Dataset):
                 x = random.random()/2
                 pink_noise = np.array([np.concatenate((1-np.arange(r)*x/r,np.zeros(128-r)-x+1))]).T
                 sound = sound*pink_noise
+            if ('bandpass' in self.aug_list) & (np.random.rand() > 0.3):
+                start = random.randint(1, 128-10)
+                leng = random.randint(0, 128-start)
+                sound[start:start + leng,:] = sound[start:start + leng,:] + (np.random.sample((leng, sound.shape[1])).astype(np.float32) + 9) * 2 * sound.mean() * 0.05 * (np.random.sample() + 0.3)
         sound = mono_to_color(sound)
         sound = sound.astype(float)
-        sound = np.stack([sound, sound, sound])
         if self.transform is not None:
             sound = self.transform(sound)
+        sound = np.stack([sound, sound, sound])
+        sound = sound.transpose(2,1,0)
+        if (self.split == 'train') & ('cutout' in self.aug_list):
+            sound = get_train_transform()(image=sound)['image']
+        sound = sound.transpose(2,1,0)
         sound = torch.from_numpy(sound)
         if (self.split == 'train') & (np.random.rand() > 0.5):
             if ('time_mask' in self.aug_list):
