@@ -30,14 +30,13 @@ def get_dataloader(
     aug_list:List = [],
     duration:int = 5,
     cleaning_path : str = '',
-    result_path : str = ''
 ) -> DataLoader:
 
     if split not in ["train", "val", "test"]:
         message = "split should be selected from ['train', 'val', 'test']."
         logger.error(message)
         raise ValueError(message)
-    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration)
+    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration, cleaning_path=cleaning_path)
     dataloader = DataLoader(
         data,
         batch_size=batch_size,
@@ -85,7 +84,6 @@ class BirdClefDataset(Dataset):
         aug_list:List = [],
         duration:int = 5,
         cleaning_path:str = '',
-        result_path = ''
     ) -> None:
         super().__init__()
 
@@ -104,7 +102,6 @@ class BirdClefDataset(Dataset):
             logger.info(f"the number of soundscape sound images:{self.soundscape_df.shape[0]}")
         self.duration = duration
         self.cleaning_path = cleaning_path
-        self.result_path = result_path
         
         logger.info(f"the number of samples: {len(self.files)}")
         logger.info(f'augmentation list:{self.aug_list}')
@@ -113,14 +110,21 @@ class BirdClefDataset(Dataset):
         return len(self.files)
 
     def __getitem__(self, idx: int):
-        sound = np.load(self.files[idx])
+        if self.split == 'train':
+            sound = np.load(self.files[idx])
+            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
+        else:
+            #検証データは "_{second}.npy"となっている
+            sound = np.load(self.files[idx].split('_')[-2] + '.npy')
+            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+        meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
         
         if len(self.cleaning_path) > 0:
             labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-            oof_train = pd.read_csv(os.path.join(self.result_path, 'train_oof.csv'))
-            oof_pred = oof_train[oof_train['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+            # ファイルごとにtrain, valを分けているのでoof_trainに絞らなくても良い
+            oof = pd.read_csv(os.path.join(self.cleaning_path, 'oof.csv'))
+            oof_pred = oof[oof['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
             if oof_pred[target]>0.5:
                 labels[target] += 1.0
             elif oof_pred[target] > 0.1:
@@ -149,7 +153,7 @@ class BirdClefDataset(Dataset):
         if self.split == 'train':
             start_idx = np.random.choice(sound.shape[0])
         else:
-            start_idx = 0
+            start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
         if start_idx + sound_size > sound.shape[0]:
             pad_size = start_idx+sound_size-sound.shape[0]
             sound = np.concatenate([sound[start_idx:], np.zeros((pad_size, sound.shape[1], sound.shape[2]))])
