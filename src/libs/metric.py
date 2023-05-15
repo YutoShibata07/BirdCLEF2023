@@ -11,9 +11,10 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, roc_auc_sco
 import pandas as pd
 import sklearn.metrics
 
+
 def padded_cmap(solution, submission, padding_factor=5):
-    solution = solution.drop(['row_id'], axis=1, errors='ignore')
-    submission = submission.drop(['row_id'], axis=1, errors='ignore')
+    solution = solution.drop(["row_id"], axis=1, errors="ignore")
+    submission = submission.drop(["row_id"], axis=1, errors="ignore")
     new_rows = []
     for i in range(padding_factor):
         new_rows.append([1 for i in range(len(solution.columns))])
@@ -24,15 +25,16 @@ def padded_cmap(solution, submission, padding_factor=5):
     score = sklearn.metrics.average_precision_score(
         padded_solution.values,
         padded_submission.values,
-        average='macro',
+        average="macro",
     )
     return score
+
 
 def padded_cmap_numpy(gts, predictions, padding_factor=5):
     new_rows = []
     for i in range(padding_factor):
         new_rows.append([1 for i in range(predictions.shape[-1])])
-    
+
     new_samples = np.array(new_rows)
     tmp_gts = np.identity(predictions.shape[1])[gts]
     padded_predictoins = np.concatenate([predictions, new_samples])
@@ -40,6 +42,6 @@ def padded_cmap_numpy(gts, predictions, padding_factor=5):
     score = sklearn.metrics.average_precision_score(
         padded_gts.astype(bool),
         padded_predictoins,
-        average='macro',
+        average="macro",
     )
     return score
