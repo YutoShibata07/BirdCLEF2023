@@ -149,7 +149,7 @@ def main():
     all_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
     all_df['filename'] = np.concatenate([train_files, val_files], 0)
     all_df['primary_label'] = all_df['filename'].apply(lambda x: x.split('/')[-2])
-    all_df['soundname'] = all_df['filename'].map(lambda x: os.path.join(x.split('/')[-2], x.split('/')[-1])[:-4])
+    all_df['soundname'] = all_df['filename'].map(lambda x: os.path.join(x.split('/')[-4].split('_')[-1] + '_' + x.split('/')[-2], x.split('/')[-1])[:-4])
     meta_df = BirdClefDataset.get_metadata()
     meta_df_2023 = pd.read_csv('../data/train_metadata.csv')
     meta_df_count = meta_df_2023.groupby('primary_label').size()
@@ -222,7 +222,7 @@ def main():
         fold_df['filename'] = new_val_files_fold
         fold_df['second'] = fold_df['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
         fold_df['primary_label'] = fold_df['filename'].apply(lambda x: x.split('/')[-2])
-        fold_df['soundname'] = fold_df['filename'].map(lambda x: os.path.join(x.split('/')[-2], x.split('/')[-1].split('_')[0]))
+        fold_df['soundname'] = fold_df['filename'].map(lambda x: x.split('/')[-4].split('_')[-1] + '_' + os.path.join(x.split('/')[-2], x.split('/')[-1].split('_')[0]))
         train_loader = get_dataloader(
             files = train_files_fold,
             batch_size=config.batch_size,
@@ -237,7 +237,6 @@ def main():
             duration=config.duration,
             cleaning_path=config.cleaning_path,
         )
-
         val_loader = get_dataloader(
             files = new_val_files_fold,
             batch_size=config.batch_size,

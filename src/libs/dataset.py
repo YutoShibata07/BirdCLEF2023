@@ -124,10 +124,10 @@ class BirdClefDataset(Dataset):
         df_2021 = pd.read_csv('../data_2021/train_metadata.csv')
         df_2022 = pd.read_csv('../data_2022/train_metadata.csv')
         df_2020 = pd.read_csv('../data_2020/train_extended.csv')
-        df_2023['soundname'] = df_2023['filename'].map(lambda x: x[:-4])
-        df_2022['soundname'] = df_2022['filename'].map(lambda x: x[:-4])
-        df_2021['soundname'] = df_2021.primary_label + '/' + df_2021['filename'].map(lambda x: x[:-4])
-        df_2020['soundname'] = df_2020.ebird_code + '/' + df_2020['filename'].map(lambda x:x.split('.')[0])
+        df_2023['soundname'] = df_2023['filename'].map(lambda x: '2023_' + x[:-4])
+        df_2022['soundname'] = df_2022['filename'].map(lambda x: '2022_' + x[:-4])
+        df_2021['soundname'] = "2021_" + df_2021.primary_label + '/' + df_2021['filename'].map(lambda x: x[:-4])
+        df_2020['soundname'] = "2020_" + df_2020.ebird_code + '/' + df_2020['filename'].map(lambda x: x.split('.')[0])
         df_2023 = df_2023[['soundname', 'rating', 'secondary_labels']]
         df_2022 = df_2022[['soundname', 'rating', 'secondary_labels']]
         df_2021 = df_2021[['soundname', 'rating', 'secondary_labels']]
@@ -151,14 +151,18 @@ class BirdClefDataset(Dataset):
         return sound
     
     def __getitem__(self, idx: int):
+        ds_name = self.files[idx].split('/')[-4].split('_')[-1]
+        if ds_name == 'dataset':
+            ds_name = "2023"
         if self.split == 'train':
             sound = self.get_sound(self.files[idx])
-            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
+            tmp_soundfile = ds_name + '_' + self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
         else:
             #検証データは "_{second}.npy"となっている
             start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
             sound = self.get_sound(self.files[idx].split('_')[-2] + '.npy', start_idx=start_idx)
-            tmp_soundfile = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
+            tmp_soundfile = ds_name + '_' +self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
+        # assert False
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
         
