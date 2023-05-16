@@ -27,6 +27,7 @@ def get_dataloader(
     drop_last: bool = False,
     transform: Optional[transforms.Compose] = None,
     bird_label_map:dict = None,
+    bird_taxonomy_map:dict = None,
     aug_list:List = [],
     duration:int = 5
 ) -> DataLoader:
@@ -35,7 +36,7 @@ def get_dataloader(
         message = "split should be selected from ['train', 'val', 'test']."
         logger.error(message)
         raise ValueError(message)
-    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration)
+    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, bird_taxonomy_map=bird_taxonomy_map, split=split, aug_list = aug_list, duration=duration)
     dataloader = DataLoader(
         data,
         batch_size=batch_size,
@@ -79,6 +80,7 @@ class BirdClefDataset(Dataset):
         files: List,
         transform: Optional[transforms.Compose] = None,
         bird_label_map:dict = None,
+        bird_taxonomy_map:dict = None,
         split:str = 'train',
         aug_list:List = [],
         duration:int = 5,
@@ -88,6 +90,7 @@ class BirdClefDataset(Dataset):
         self.files = files
         self.transform = transform
         self.bird_label_dict = bird_label_map
+        self.bird_taxonomy_dict = bird_taxonomy_map
         self.df_meta = self.get_metadata()
         self.split = split
         self.aug_list = aug_list
@@ -108,6 +111,8 @@ class BirdClefDataset(Dataset):
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
+        order_target = self.bird_taxonomy_dict[target][0]
+        family_target = self.bird_label_dict[target][1]
         meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
         
         labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
@@ -115,7 +120,21 @@ class BirdClefDataset(Dataset):
         for slabel in eval(meta['secondary_labels']):
             if slabel in self.bird_label_dict.keys():
                 labels[self.bird_label_dict[slabel]] += 0.2999
-        
+
+        taxonomy_value_list = np.array(list(self.bird_taxonomy_dict.values()))
+        order_labels = np.zeros(np.max(taxonomy_value_list[:, 0]), dtype=float) + 0.0001
+        order_labels[order_target] += 0.9999
+
+        family_labels = np.zeros(np.max(taxonomy_value_list[:, 1]), dtype=float) + 0.0001
+        family_labels[family_target] += 0.9999
+
+        for slabel in eval(meta['secondary_labels']):
+            if (slabel in self.bird_label_dict.keys()) & (slabel in self.bird_taxonomy_dict.keys()):
+                order_labels[self.bird_tanomy_dict[slabel][0]] += 0.2999
+                family_labels[self.bird_tanomy_dict[slabel][1]] += 0.2999
+        order_labels = np.clip(order_labels, None, 0.9999)
+        family_labels = np.clip(family_labels, None, 0.9999)
+
         sound_size = int(self.duration//5)
         if self.split == 'train':
             start_idx = np.random.choice(sound.shape[0])
@@ -203,6 +222,8 @@ class BirdClefDataset(Dataset):
         sample = {
             "sound": sound,
             "target": labels,
+            "order_target": order_labels,
+            "family_target": family_labels,
             "rating": meta['rating']
         }
 
