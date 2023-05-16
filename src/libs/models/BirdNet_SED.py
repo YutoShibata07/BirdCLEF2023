@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import timm
+import librosa
 from torchlibrosa.augmentation import SpecAugmentation
 
 
@@ -138,9 +139,11 @@ class BirdNet_SED(nn.Module):
         model_name: str = "tf_efficientnet_b0_ns",
         pretrained: bool = True,
         output_dim=264,
+        freq_cha = False
     ) -> None:
         super().__init__()
         self.backbone = timm.create_model(model_name, pretrained=pretrained)
+        self.freq_cha = freq_cha
         self.in_features = self.backbone.classifier.in_features
         self.backbone.classifier = nn.Sequential(
             nn.Linear(self.in_features, output_dim)
@@ -166,7 +169,13 @@ class BirdNet_SED(nn.Module):
     def forward(self, x):
         # (batch_size, 3, mel_bins, time_steps)
         frames_num = x.shape[3]
-
+        if self.freq_cha==True:
+            freq = librosa.mel_frequencies(n_mels=128, fmin=0, fmax=32000//2)
+            freq = freq/freq.max()
+            freq = torch.from_numpy(freq)
+            freq = torch.tile(freq.unsqueeze(-1), (1, frames_num))
+            x[:,-1,:,:] = freq
+            
         # if self.training:
         #     x = self.spec_augmenter(x)
 

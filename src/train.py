@@ -210,6 +210,8 @@ def main():
         else:
             train_files_fold = list(all_df.iloc[train_index]['filename'].values) + list(few_df['filename'].values)
             val_files_fold = list(all_df.iloc[val_index]['filename'].values)
+        logger.info(f'train file size:{len(train_files)}')
+        logger.info(f'val file size:{len(val_files)}')
         #　検証データに関しては全時間のサンプルを取得する
         new_val_files_fold = []
         for file in val_files_fold:
