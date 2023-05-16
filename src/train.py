@@ -238,9 +238,23 @@ def main():
             cleaning_path=config.cleaning_path,
         )
         val_loader = get_dataloader(
-            files = new_val_files_fold,
+            files = val_files_fold,
             batch_size=config.batch_size,
             split='val',
+            num_workers=2,
+            pin_memory=True,
+            drop_last=False,
+            transform=None,
+            bird_label_map = bird_label_map,
+            shuffle=False,
+            aug_list=[],
+            duration=config.duration,
+            cleaning_path='',
+        ) 
+        val_oof_loader = get_dataloader(
+            files = new_val_files_fold,
+            batch_size=config.batch_size,
+            split='oof',
             num_workers=2,
             pin_memory=True,
             drop_last=False,
@@ -267,12 +281,12 @@ def main():
                 val_loss, val_gts, val_preds, val_score = evaluate(
                     val_loader, model, criterion, device, do_mixup=False
                 )
-                tmp_val_df = fold_df.copy()
-                tmp_val_df[birds] = val_preds
-                tmp_val_df['second'] = tmp_val_df['filename'].apply(lambda x: int(x.split('_')[-1].split('.')[0]))
-                tmp_val_df['primary_label_num'] = tmp_val_df['primary_label'].apply(lambda x:bird_label_map[x])
-                first_samples = tmp_val_df[tmp_val_df.second == 0]
-                val_score = padded_cmap_numpy(predictions=first_samples[birds].values, gts=first_samples['primary_label_num'].values)
+                # tmp_val_df = fold_df.copy()
+                # tmp_val_df[birds] = val_preds
+                # tmp_val_df['second'] = tmp_val_df['filename'].apply(lambda x: int(x.split('_')[-1].split('.')[0]))
+                # tmp_val_df['primary_label_num'] = tmp_val_df['primary_label'].apply(lambda x:bird_label_map[x])
+                # first_samples = tmp_val_df[tmp_val_df.second == 0]
+                # val_score = padded_cmap_numpy(predictions=first_samples[birds].values, gts=first_samples['primary_label_num'].values)
                 val_time = int(time.time() - start)
                 if val_score > best_score:
                     best_preds = val_preds
@@ -306,30 +320,36 @@ def main():
                     )
                 if epoch > best_epoch + config.early_stop_epoch:
                     break
-                
+              
             torch.save(model.state_dict(), os.path.join(result_path, f'fold{fold}_final_model.prm'))   
             logger.info(f'fold_{fold}_best score:{best_score}')
+            best_model = model.load_state_dict(torch.load(os.path.join(result_path, f'fold{fold}_best_model.prm')))
+            _, _, best_preds, val_score = evaluate(
+                    val_oof_loader, model, criterion, device, do_mixup=False
+            )
             fold_df[birds] = best_preds   
             oof_df = pd.concat([oof_df, fold_df])
             
         else:
             model_path = os.path.join(result_path, f'fold_{fold}_best_model.prm')
             logger.info(model_path)
-            model.load_state_dict(torch.load(model_path))
-            val_loss, val_gts, best_preds, best_score = evaluate(
+            model.load_state_dict(torch.load(os.path.join(result_path, f'fold{fold}_best_model.prm')))
+            val_loss, val_gts, _, best_score = evaluate(
                     val_loader, model, criterion, device, do_mixup=False
             )
             val_score = best_score
             logger.info(f'fold{fold}_best score:{best_score}')
-                
-                
+            _, _, best_preds, _ = evaluate(
+                val_oof_loader, model, criterion, device, do_mixup=False
+            )
+            fold_df[birds] = best_preds   
+            oof_df = pd.concat([oof_df, fold_df]) 
+            logger.info(f"Best score:{best_score}")   
             wandb.finish()
             del train_loader, val_loader
             gc.collect()
             fold_df[birds] = best_preds   
             oof_df = pd.concat([oof_df, fold_df])
-            logger.info(f"Final score:{val_score}")
-            logger.info(f"Best score:{best_score}")
         tmp = pd.Series(
                 [fold, val_score, best_score],
                 index=['fold','final_score','best_score'],
