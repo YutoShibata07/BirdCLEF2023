@@ -13,6 +13,7 @@ model_names = [
     "bird_base",
     "bird_sed",
     "bird_sed_b1",
+    "bird_sed_b1_freq"
 ]
 logger = getLogger(__name__)
 
@@ -43,6 +44,10 @@ def get_model(
     elif name == "bird_sed_b1":
         model = BirdNet_SED(
             model_name="tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim
+        )
+    elif name == "bird_sed_b1_freq":
+        model = BirdNet_SED(
+            model_name="tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim, freq_cha=True
         )
     else:
         logger.error("There is no model appropriate to your choice. ")
