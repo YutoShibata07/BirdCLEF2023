@@ -42,7 +42,7 @@ def get_dataloader(
     cleaning_path :str = '',
 ) -> DataLoader:
 
-    if split not in ["train", "val", "test"]:
+    if split not in ["train", "val", "test", 'oof']:
         message = "split should be selected from ['train', 'val', 'test']."
         logger.error(message)
         raise ValueError(message)
@@ -114,7 +114,11 @@ class BirdClefDataset(Dataset):
         self.cleaning_path = cleaning_path
         logger.info(f"the number of samples: {len(self.files)}")
         logger.info(f'augmentation list:{self.aug_list}')
-
+        if len(self.cleaning_path) > 0:
+            self.oof = pd.read_csv(os.path.join('../result', self.cleaning_path, 'oof.csv'))
+            self.oof['soundname'] = self.oof['soundname'].apply(lambda x:x.split('_')[-1])
+            self.oof['image_idx'] = self.oof['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
+            self.oof = self.oof.reset_index(drop=True)
     def __len__(self) -> int:
         return len(self.files)
     
@@ -148,57 +152,63 @@ class BirdClefDataset(Dataset):
             sound = sound[start_idx:start_idx+sound_size, :, :]
         sound = sound.transpose(0, 2, 1)
         sound = sound.reshape([-1, sound.shape[-1]]).T
-        return sound
+        return sound, start_idx
     
     def __getitem__(self, idx: int):
         ds_name = self.files[idx].split('/')[-4].split('_')[-1]
         if ds_name == 'dataset':
             ds_name = "2023"
         if self.split == 'train':
-            sound = self.get_sound(self.files[idx])
+            sound, start_idx = self.get_sound(self.files[idx])
             tmp_soundfile = ds_name + '_' + self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
-        else:
+        elif self.split=='oof':
             #検証データは "_{second}.npy"となっている
             start_idx = int(self.files[idx].split('_')[-1].split('.npy')[0])
-            sound = self.get_sound(self.files[idx].split('_')[-2] + '.npy', start_idx=start_idx)
+            sound,_ = self.get_sound(self.files[idx].split('_')[-2] + '.npy', start_idx=start_idx)
             tmp_soundfile = ds_name + '_' +self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1].split('_')[-2]
+        else:
+            start_idx = 0
+            sound, _ = self.get_sound(self.files[idx], start_idx=start_idx)
+            tmp_soundfile = ds_name + '_' + self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
         # assert False
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
         meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
-        
-        if len(self.cleaning_path) > 0:
-            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-            # ファイルごとにtrain, valを分けているのでoof_trainに絞らなくても良い
-            oof = pd.read_csv(os.path.join(self.cleaning_path, 'oof.csv'))
-            oof_pred = oof[oof['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
-            if oof_pred[target]>0.5:
-                labels[target] += 1.0
-            elif oof_pred[target] > 0.1:
-                labels[target] += 0.9975
-            elif oof_pred[target] > 0.01:
-                labels[target] += 0.5
+        if self.split == 'train':
+            soundname = self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]
+            if (len(self.cleaning_path) > 0) & (soundname in self.oof.soundname.unique()):
+                labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+                # ファイルごとにtrain, valを分けているのでoof_trainに絞らなくても良い
+                oof_pred = self.oof[(self.oof['soundname']==soundname) & (self.oof.image_idx==start_idx)].iloc[0, 4:-1]
+                if oof_pred[target]>0.5:
+                    labels[target] += 1.0
+                elif oof_pred[target] > 0.1:
+                    labels[target] += 0.9975
+                elif oof_pred[target] > 0.01:
+                    labels[target] += 0.5
+                else:
+                    labels[target] += 0.2
+                for slabel in eval(meta['secondary_labels']):
+                    if slabel in self.bird_label_dict.keys():
+                        sec_idx = self.bird_label_dict[slabel]
+                        if oof_pred[sec_idx]>0.5:
+                            labels[sec_idx] = 0.9975
+                        elif oof_pred[sec_idx] > 0.1:
+                            labels[sec_idx] = 0.8
+                        else:
+                            labels[sec_idx] = 0.0025
             else:
-                labels[target] += 0.2
-            for slabel in eval(oof_pred['secondary_labels']):
-                if slabel in self.bird_label_dict.keys():   
-                    if oof_pred[slabel]>0.5:
-                        labels[slabel] = 0.9975
-                    elif oof_pred[slabel] > 0.1:
-                        labels[slabel] = 0.8
-                    else:
-                        labels[slabel] = 0.0025
-
+                labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
+                labels[target] += 0.9999
+                for slabel in eval(meta['secondary_labels']):
+                    if slabel in self.bird_label_dict.keys():
+                        labels[self.bird_label_dict[slabel]] += 0.2999
         else:
-            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
-            labels[target] += 0.9999
-            for slabel in eval(meta['secondary_labels']):
-                if slabel in self.bird_label_dict.keys():
-                    labels[self.bird_label_dict[slabel]] += 0.2999
-        
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+            labels[target] = 1.0
         sound_size = int(self.duration//5)
         # intra mixup
         if (self.split=='train') & (np.random.rand() > 0.75):
-            sound2 = self.get_sound(self.files[idx])
+            sound2, start_idx = self.get_sound(self.files[idx])
             ratio = np.random.rand()
             sound = librosa.db_to_power(sound) * ratio + librosa.db_to_power(sound2) * (1 - ratio)
             sound = librosa.power_to_db(sound)
