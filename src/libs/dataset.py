@@ -119,6 +119,8 @@ class BirdClefDataset(Dataset):
             self.oof['soundname'] = self.oof['soundname'].apply(lambda x:x.split('_')[-1])
             self.oof['image_idx'] = self.oof['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
             self.oof = self.oof.reset_index(drop=True)
+        else:
+            self.oof = pd.DataFrame(columns=['soundname'])
     def __len__(self) -> int:
         return len(self.files)
     
@@ -143,15 +145,16 @@ class BirdClefDataset(Dataset):
         sound_size = int(self.duration//5)
         if start_idx == None:
             start_idx = np.random.choice(sound.shape[0])
-        if start_idx + sound_size > sound.shape[0]:
-            pad_size = start_idx+sound_size-sound.shape[0]
-            # 10秒だと仮定
-            # sound = np.concatenate([sound[start_idx:], sound[start_idx:]], axis=-1)
-            sound = np.concatenate([sound[start_idx:], np.zeros((pad_size, sound.shape[1], sound.shape[2]))])
-        else:
-            sound = sound[start_idx:start_idx+sound_size, :, :]
-        sound = sound.transpose(0, 2, 1)
-        sound = sound.reshape([-1, sound.shape[-1]]).T
+        # if start_idx + sound_size > sound.shape[0]:
+        #     pad_size = start_idx+sound_size-sound.shape[0]
+        #     # 10秒だと仮定
+        #     # sound = np.concatenate([sound[start_idx:], sound[start_idx:]], axis=-1)
+        #     sound = np.concatenate([sound[start_idx:], np.zeros((pad_size, sound.shape[1], sound.shape[2]))])
+        # else:
+        #     sound = sound[start_idx:start_idx+sound_size, :, :]
+        sound = sound[start_idx,:,:]
+        # sound = sound.transpose(0, 2, 1)
+        # sound = sound.reshape([-1, sound.shape[-1]]).T
         return sound, start_idx
     
     def __getitem__(self, idx: int):
