@@ -19,6 +19,8 @@ def get_criterion(
         criterion = BCEFocalLoss(output_dict=True)
     elif loss_fn == 'bce':
         criterion = nn.BCEWithLogitsLoss()
+    elif loss_fn == 'clip_bce':
+        criterion = BinaryCrossEntropyLoss()
     elif loss_fn == 'bcef_2way':
         criterion = BCEFocal2WayLoss()
     elif loss_fn == "focal_clip_max":

@@ -124,7 +124,7 @@ class LogMelIntensityExtractor:
         self.fmax = self.sr // 2
         self.duration = duration
         self.audio_length = self.duration * self.sr
-        self.step = int(self.duration * 0.666 * self.sr)
+        self.step = int(self.duration * self.sr)
         self.resample = resample
         self.save_dir = save_dir
         self.dataset_name = dataset_name

@@ -1,5 +1,6 @@
 from logging import getLogger
 from .BirdNet_SED import BirdNet_SED
+from .BirdNet_maxpooling import BirdNetwMaxpool
 
 import torch.nn as nn
 import torchvision
@@ -13,7 +14,8 @@ model_names = [
     "bird_base",
     "bird_sed",
     "bird_sed_b1",
-    "bird_sed_b1_freq"
+    "bird_sed_b1_freq",
+    "bird_maxpool",
 ]
 logger = getLogger(__name__)
 
@@ -49,6 +51,8 @@ def get_model(
         model = BirdNet_SED(
             model_name="tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim, freq_cha=True
         )
+    elif name == 'bird_maxpool':
+        model = BirdNetwMaxpool(model_name = "tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim)
     else:
         logger.error("There is no model appropriate to your choice. ")
     if pretrained_path != "":
