@@ -40,6 +40,7 @@ def get_dataloader(
     aug_list:List = [],
     duration:int = 5,
     cleaning_path :str = '',
+    cls_weight = [],
 ) -> DataLoader:
 
     if split not in ["train", "val", "test", 'oof']:
@@ -47,15 +48,27 @@ def get_dataloader(
         logger.error(message)
         raise ValueError(message)
     data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, split=split, aug_list = aug_list, duration=duration, cleaning_path=cleaning_path)
-    dataloader = DataLoader(
-        data,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
-        drop_last=drop_last,
-    )
-
+    if (len(cls_weight) == 0) | (split != 'train'):
+        dataloader = DataLoader(
+            data,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+        )
+    else:
+        cls_weight = 1 / (torch.Tensor(cls_weight))
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(cls_weight,num_samples=len(data), replacement=True)
+        dataloader = DataLoader(
+            data,
+            batch_size=batch_size,
+            # shuffle=shuffle,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+            sampler=sampler,
+        )
     return dataloader
 
 def mono_to_color(X, eps=1e-6, mean=None, std=None):
@@ -121,6 +134,10 @@ class BirdClefDataset(Dataset):
             self.oof = self.oof.reset_index(drop=True)
         else:
             self.oof = pd.DataFrame(columns=['soundname'])
+        if 'esc50' in self.aug_list:
+            self.esc_df = pd.read_csv('../data_esc50/esc50.csv')
+            self.esc_df = self.esc_df[self.esc_df.category != 'chirping_birds'].reset_index()
+            self.esc_files = glob.glob('../dataset_soundscapes_esc50/logmel/44100/*.npy')
     def __len__(self) -> int:
         return len(self.files)
     
@@ -255,6 +272,14 @@ class BirdClefDataset(Dataset):
                     ratio = 0.5 * np.random.rand()
                     sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
                     sound = librosa.power_to_db(sound)
+            if ('esc50' in self.aug_list) & (np.random.rand() > 0.5):
+                esc_img = np.load(self.esc_files[np.random.choice(len(self.esc_files))])[0]
+                esc_img = librosa.db_to_power(esc_img)
+                start = np.random.randint(0, sound.shape[1] - esc_img.shape[-1])
+                ratio = 0.5 * np.random.rand()
+                width = esc_img.shape[1]
+                sound[:,start:start + width] = librosa.db_to_power(sound)[:,start:start + width] * (1-ratio) + esc_img * ratio
+                sound = librosa.power_to_db(sound)
             if ('random_power' in self.aug_list) & (np.random.rand() > 0.5):
                 sound = random_power(images=sound, power = 3, c= 0.5)
             if ('white' in self.aug_list) & (np.random.rand() > 0.8):

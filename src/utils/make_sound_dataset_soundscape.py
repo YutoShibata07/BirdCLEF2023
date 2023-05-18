@@ -144,7 +144,7 @@ class LogMelIntensityExtractor:
         sound, original_sr = sf.read(sig_path)
         if (self.resample == True) & (original_sr != self.sr):
             sound = librosa.resample(
-                sound, original_sr, self.sr, res_type="kaiser_fast"
+                y=sound, orig_sr=original_sr, target_sr=self.sr, res_type="kaiser_fast"
             )
         sounds = [
             sound[i : i + self.audio_length]
@@ -162,7 +162,7 @@ class LogMelIntensityExtractor:
             sound = sound[:, 0]
         if (self.resample == True) & (original_sr != self.sr):
             sound = librosa.resample(
-                sound, original_sr, self.sr, res_type="kaiser_fast"
+                y=sound, orig_sr=original_sr, target_sr=self.sr, res_type="kaiser_fast"
             )
         sounds = [
             sound[i : i + self.audio_length]
@@ -203,10 +203,10 @@ def main() -> None:
     # すでにデータセットが存在しているなら終了
     if os.path.exists(dataset_dir):
         print("Sound dataset exists.")
-        return
+        # return
     else:
         os.mkdir(dataset_dir)
-    meta_df = pd.read_csv(args.meta_path)
+    # meta_df = pd.read_csv(args.meta_path)
 
     feature_extractor = LogMelIntensityExtractor(
         sr=args.sr,
@@ -214,8 +214,9 @@ def main() -> None:
         n_mels=args.n_mels,
         save_dir=args.save_dir,
         dataset_name=dataset_name,
+        duration=args.duration,
     )
-    filepath_list = glob.glob(os.path.join(args.sound_dir, "*.ogg"))
+    filepath_list = glob.glob(os.path.join(args.sound_dir, "*.ogg")) + glob.glob(os.path.join(args.sound_dir, "*.wav"))
     # ToDo -> 並列処理で前処理を実行
     p = Pool(10)
     result = p.map(feature_extractor.save_soundfile, filepath_list)

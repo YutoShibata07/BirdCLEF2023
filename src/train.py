@@ -156,6 +156,7 @@ def main():
     few_labels = meta_df_count[meta_df_count<config.n_split].index.tolist()
     all_df = all_df.merge(meta_df, on='soundname', how='left')
     all_df[birds] = 0
+    all_birds_df = all_df.copy()
     few_df = all_df[all_df.primary_label.isin(few_labels)]
     all_df = all_df[~all_df.primary_label.isin(few_labels)].reset_index()
     kf = StratifiedKFold(n_splits=config.n_split, random_state=args.seed, shuffle=True)
@@ -223,6 +224,14 @@ def main():
         fold_df['second'] = fold_df['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
         fold_df['primary_label'] = fold_df['filename'].apply(lambda x: x.split('/')[-2])
         fold_df['soundname'] = fold_df['filename'].map(lambda x: x.split('/')[-4].split('_')[-1] + '_' + os.path.join(x.split('/')[-2], x.split('/')[-1].split('_')[0]))
+        if config.weight_sample==True:
+            cls_weight_dict = all_birds_df.primary_label.value_counts()[birds]
+            tmp_df = pd.concat([all_df.iloc[train_index], few_df])
+            tmp_df = tmp_df.reset_index(drop=True)
+            cls_weight = tmp_df['primary_label'].apply(lambda x:cls_weight_dict[x])
+            print(cls_weight)
+        else:
+            cls_weight = []
         train_loader = get_dataloader(
             files = train_files_fold,
             batch_size=config.batch_size,
@@ -236,6 +245,7 @@ def main():
             aug_list=get_augmentations(config.aug_ver),
             duration=config.duration,
             cleaning_path=config.cleaning_path,
+            cls_weight=cls_weight
         )
         val_loader = get_dataloader(
             files = val_files_fold,
