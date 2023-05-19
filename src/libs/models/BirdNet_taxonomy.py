@@ -120,10 +120,7 @@ class BirdNet_Taxonomy(nn.Module):
             outputs_dicts = {}
             labels = ['species', 'order', 'family']
             for label in labels:
-                if label in ['order', 'family']:
-                    __output_dict = self.models[label](y.detach().clone(), frames_num)
-                else:
-                    __output_dict = self.models[label](y, frames_num)
+                __output_dict = self.models[label](y, frames_num)
                 outputs_dicts[label] = __output_dict
 
             return outputs_dicts    

@@ -171,6 +171,8 @@ class BCEFocalLoss_Group(nn.Module):
         self.bce_loss = BinaryCrossEntropyLoss()
 
     def forward(self, preds, targets, rating):
+        print('target', targets['target'])
+        print('order_target', targets['order_target'])
         species_loss = self.focal_loss(preds['species'], targets['target'], rating)
         order_loss = self.bce_loss(preds['order'], targets['order_target'], rating)
         family_loss = self.bce_loss(preds['family'], targets['family_target'], rating)
