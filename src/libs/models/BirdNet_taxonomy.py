@@ -8,10 +8,9 @@ from torchlibrosa.augmentation import SpecAugmentation
 from libs.models.BirdNet_SED import *
 
 class Base(nn.Module):
-    def __init__(self, in_features, encoder, output_dim = 264) -> None:
+    def __init__(self, in_features, output_dim = 264) -> None:
         super().__init__()
         self.in_features = in_features
-        self.encoder = encoder
         self.backbone = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Flatten(),
@@ -27,10 +26,9 @@ class Base(nn.Module):
         return output_dict
     
 class Base_SED(nn.Module):
-    def __init__(self, in_features, encoder, output_dim = 264) -> None:
+    def __init__(self, in_features, output_dim = 264) -> None:
         super().__init__()
         self.in_features = in_features
-        self.encoder = encoder
         self.bn0 = nn.BatchNorm2d(128)
         self.fc1 = nn.Linear(self.in_features, self.in_features, bias=True)
         self.att_block = AttBlockV2(
@@ -102,10 +100,12 @@ class BirdNet_Taxonomy(nn.Module):
 
         layers = list(self.backbone.children())[:-2]
         self.encoder = nn.Sequential(*layers)
-
-        self.models = {'species':Base_SED(in_features=self.in_features, encoder=self.encoder, output_dim=output_dim), 
-                       'order':Base(in_features=self.in_features, encoder=self.encoder, output_dim=order_dim), 
-                       'family':Base(in_features=self.in_features, encoder=self.encoder, output_dim=fam_dim)}
+        base_sp = Base_SED(in_features=self.in_features, output_dim=output_dim)
+        base_ord = Base(in_features=self.in_features, output_dim=order_dim)
+        base_fam = Base(in_features=self.in_features, output_dim=fam_dim)
+        self.models = {'species':base_sp, 
+                       'order':base_ord, 
+                       'family':base_fam}
         self.is_train = is_train
 
     def init_weight(self):
@@ -125,9 +125,10 @@ class BirdNet_Taxonomy(nn.Module):
 
             return outputs_dicts    
         else:
-            return self.models['species'](x)
+            return self.models['species'](y, frames_num)
         
     def to(self, device):
+        self.encoder.to(device)
         self.models['species'].to(device)
         self.models['order'].to(device)
         self.models['family'].to(device)
