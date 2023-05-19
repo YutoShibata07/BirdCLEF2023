@@ -34,7 +34,8 @@ def do_one_iteration(
     iter_type: str,
     optimizer: Optional[optim.Optimizer] = None,
     scheduler = None,
-    do_mixup:bool = False
+    do_mixup:bool = False,
+    use_taxonomy:bool = False,
 ) -> Tuple[int, float, float, np.ndarray, np.ndarray]:
 
     if iter_type not in ["train", "evaluate"]:
@@ -48,13 +49,17 @@ def do_one_iteration(
         raise ValueError(message)
 
     x = sample['sound'].to(device).float()
-    t = sample['target'].to(device)
+
+    t = sample['target']
+    for key in t.keys():
+        t[key] = t[key].to(device)
+
     rating = sample['rating'].to(device)
 
     batch_size = x.shape[0]
     output = model(x)
     if (do_mixup==True) & (np.random.rand() > 0.5):
-        mixed_x, y_a, y_b, lam, = mixup.mixup_data(x, t)
+        mixed_x, y_a, y_b, lam, = mixup.mixup_data(x, t, use_taxonomy=use_taxonomy)
         output = model(mixed_x)
         loss = mixup.mixup_criterion(criterion, output, y_a, y_b, lam, rating)
     else:
@@ -67,8 +72,12 @@ def do_one_iteration(
         optimizer.step()
 
     # keep predicted results and gts for calculate F1 Score
-    gt = t.to('cpu').detach().argmax(dim=1).numpy()
-    pred = output['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
+    gt = t['target'].to('cpu').detach().argmax(dim=1).numpy()
+    if use_taxonomy:
+        pred = output['species']['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
+    else:
+        pred = output['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
+
     return batch_size, loss.item(), gt, pred
 
 
@@ -82,6 +91,7 @@ def train(
     device: str,
     interval_of_progress: int = 50,
     do_mixup:bool = False,
+    use_taxonomy:bool = False
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
 
     batch_time = AverageMeter("Time", ":6.3f")
@@ -108,7 +118,7 @@ def train(
         data_time.update(time.time() - end)
 
         batch_size, loss, gt, pred = do_one_iteration(
-            sample, model, criterion, device, "train", optimizer, scheduler = scheduler, do_mixup=do_mixup
+            sample, model, criterion, device, "train", optimizer, scheduler = scheduler, do_mixup=do_mixup, use_taxonomy=use_taxonomy
         )
 
         losses.update(loss, batch_size)
@@ -145,6 +155,7 @@ def evaluate(
     criterion: Any,
     device: str,
     do_mixup:bool = False,
+    use_taxonomy:bool = False
 ) -> Tuple[float, float, float, np.ndarray, np.ndarray]:
     losses = AverageMeter("Loss", ":.4e")
 
@@ -159,7 +170,7 @@ def evaluate(
         for sample in loader:
             
             batch_size, loss, gt, pred = do_one_iteration(
-                sample, model, criterion, device, "evaluate", do_mixup=do_mixup
+                sample, model, criterion, device, "evaluate", do_mixup=do_mixup, use_taxonomy=use_taxonomy
             )
 
             losses.update(loss, batch_size)

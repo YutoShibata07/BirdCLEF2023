@@ -73,7 +73,7 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--duration",
         type=int,
-        default=5,
+        default=10,
         help="the number of mel bins",
     )
     return parser.parse_args()
@@ -177,7 +177,7 @@ def main() -> None:
     if '2021' in args.sound_dir:
         meta_df['filename'] = meta_df['primary_label'].str.cat(meta_df['filename'], sep='/')
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
-    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
+    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name, duration=args.duration)
     filepath_list = meta_df['filename']
     # ToDo -> 並列処理で前処理を実行
     p = Pool(10)

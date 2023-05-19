@@ -24,6 +24,8 @@ def get_criterion(
         criterion = BCEFocalLoss(output_dict=True, clip_max=True)
     elif loss_fn == 'focal_clip_max_v2':
         criterion = BCEFocalLoss_v2(output_dict=True, clip_max=True)
+    elif loss_fn == 'focal_clip_max_taxonomy':
+        criterion = BCEFocalLoss_Group(output_dict=True, clip_max=True)
     else:
         message = "loss function not found"
         logger.error(message)
@@ -154,3 +156,22 @@ class AutomaticWeightedLoss(nn.Module):
         for i, loss in enumerate(x):
             loss_sum += 0.5 / (self.params[i] ** 2) * loss + torch.log(1 + self.params[i] ** 2)
         return loss_sum
+    
+class BCEFocalLoss_Group(nn.Module):    
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False, w_order = 0.1, w_family = 0.1):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.output_dict = output_dict
+        self.clip_max = clip_max
+        self.w_order = w_order
+        self.w_family = w_family
+
+        self.focal_loss = BCEFocalLoss(alpha=self.alpha, gamma=self.gamma, output_dict=self.output_dict, clip_max=self.clip_max)
+
+    def forward(self, preds, targets, rating):
+        species_loss = self.focal_loss(preds['species'], targets['target'], rating)
+        order_loss = self.focal_loss(preds['order'], targets['order_target'], rating)
+        family_loss = self.focal_loss(preds['family'], targets['family_target'], rating)
+
+        return species_loss + self.w_order*order_loss + self.w_family*family_loss

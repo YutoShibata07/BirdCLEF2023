@@ -111,8 +111,9 @@ class BirdClefDataset(Dataset):
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
         target = self.bird_label_dict[self.files[idx].split('/')[-2]]
-        order_target = self.bird_taxonomy_dict[target][0]
-        family_target = self.bird_label_dict[target][1]
+
+        order_target = self.bird_taxonomy_dict[self.files[idx].split('/')[-2]][0]
+        family_target = self.bird_taxonomy_dict[self.files[idx].split('/')[-2]][1]
         meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
         
         labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
@@ -130,8 +131,8 @@ class BirdClefDataset(Dataset):
 
         for slabel in eval(meta['secondary_labels']):
             if (slabel in self.bird_label_dict.keys()) & (slabel in self.bird_taxonomy_dict.keys()):
-                order_labels[self.bird_tanomy_dict[slabel][0]] += 0.2999
-                family_labels[self.bird_tanomy_dict[slabel][1]] += 0.2999
+                order_labels[self.bird_taxonomy_dict[slabel][0]] += 0.2999
+                family_labels[self.bird_taxonomy_dict[slabel][1]] += 0.2999
         order_labels = np.clip(order_labels, None, 0.9999)
         family_labels = np.clip(family_labels, None, 0.9999)
 
@@ -172,7 +173,7 @@ class BirdClefDataset(Dataset):
                 for i in range(sound_size):
                     ss_idx = np.random.choice(self.soundscape_df.shape[0])
                     ss_file = self.soundscape_df.loc[ss_idx, 'filepath']
-                    ss_num = self.soundscape_df['seconds'].values[ss_idx] // 5 - 1
+                    ss_num = self.soundscape_df['seconds'].values[ss_idx] // 10 - 1
                     soundscape = np.load(ss_file)
                     soundscapes.append(soundscape[int(ss_num)])
                 soundscapes = np.array(soundscapes) #[sound_size, freq_num, time_dim]
@@ -221,9 +222,7 @@ class BirdClefDataset(Dataset):
         
         sample = {
             "sound": sound,
-            "target": labels,
-            "order_target": order_labels,
-            "family_target": family_labels,
+            "target": {'target':labels, 'order_target': order_labels, 'family_target':family_labels},
             "rating": meta['rating']
         }
 

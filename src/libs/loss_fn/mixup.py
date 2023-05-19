@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 
-def mixup_data(x, y, alpha=0.2, use_cuda=True):
+def mixup_data(x, y, alpha=0.2, use_cuda=True, use_taxonomy=False):
     """Returns mixed inputs, pairs of targets, and lambda"""
     if alpha > 0:
         lam = np.random.beta(alpha, alpha)
@@ -16,7 +16,15 @@ def mixup_data(x, y, alpha=0.2, use_cuda=True):
         index = torch.randperm(batch_size)
 
     mixed_x = lam * x + (1 - lam) * x[index, :]
-    y_a, y_b = y, y[index]
+    if use_taxonomy:
+        y_a = y
+        y_b = {}
+        keys = y.keys()
+        for key in keys:
+            y_b[key] = y[key][index]
+    else:
+        y_a, y_b = y, y[index]
+
     return mixed_x, y_a, y_b, lam
 
 

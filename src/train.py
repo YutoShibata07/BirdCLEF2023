@@ -142,6 +142,7 @@ def main():
         
 
     bird_label_map = {birds[i]:i for i in range(len(birds))}
+    bird_taxonomy_map = pd.read_pickle('../../BirdCLEF2023/csv/taxonomy_dict.pkl')
     train_loader = get_dataloader(
         files = train_files,
         batch_size=config.batch_size,
@@ -151,6 +152,7 @@ def main():
         drop_last=True,
         transform=None,
         bird_label_map = bird_label_map,
+        bird_taxonomy_map = bird_taxonomy_map,
         shuffle=True,
         aug_list=get_augmentations(config.aug_ver),
         duration=config.duration,
@@ -165,6 +167,7 @@ def main():
         drop_last=False,
         transform=None,
         bird_label_map = bird_label_map,
+        bird_taxonomy_map = bird_taxonomy_map,
         shuffle=False,
         aug_list=[],
         duration=config.duration
@@ -185,7 +188,11 @@ def main():
     
     model.to(device)
     optimizer = optim.Adam(model.parameters(), lr = config.lr_max)
-    
+
+    use_taxonomy = False
+    if "taxonomy" in config.model:
+        use_taxonomy = True
+
     if args.use_wandb:
         wandb.init(
             name=experiment_name,
@@ -218,13 +225,13 @@ def main():
         for epoch in range(begin_epoch, config.max_epoch):
             start = time.time()
             train_loss, gts, preds, train_score = train(
-                train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup
+                train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup, use_taxonomy=use_taxonomy
             )
             train_time = int(time.time()-start)
             
             start = time.time()
             val_loss, val_gts, val_preds, val_score = evaluate(
-                val_loader, model, criterion, device, do_mixup=False
+                val_loader, model, criterion, device, do_mixup=False, use_taxonomy=use_taxonomy
             )
             val_time = int(time.time() - start)
             if val_score > best_score:
