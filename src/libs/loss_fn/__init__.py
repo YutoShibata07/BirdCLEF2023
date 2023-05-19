@@ -158,7 +158,7 @@ class AutomaticWeightedLoss(nn.Module):
         return loss_sum
     
 class BCEFocalLoss_Group(nn.Module):    
-    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False, w_order = 0.1, w_family = 0.1):
+    def __init__(self, alpha=1, gamma=2.0, output_dict = False, clip_max = False, w_order = 0, w_family = 0):
         super().__init__()
         self.alpha = alpha
         self.gamma = gamma
@@ -168,10 +168,11 @@ class BCEFocalLoss_Group(nn.Module):
         self.w_family = w_family
 
         self.focal_loss = BCEFocalLoss(alpha=self.alpha, gamma=self.gamma, output_dict=self.output_dict, clip_max=self.clip_max)
+        self.bce_loss = BinaryCrossEntropyLoss()
 
     def forward(self, preds, targets, rating):
         species_loss = self.focal_loss(preds['species'], targets['target'], rating)
-        order_loss = self.focal_loss(preds['order'], targets['order_target'], rating)
-        family_loss = self.focal_loss(preds['family'], targets['family_target'], rating)
+        order_loss = self.bce_loss(preds['order'], targets['order_target'], rating)
+        family_loss = self.bce_loss(preds['family'], targets['family_target'], rating)
 
         return species_loss + self.w_order*order_loss + self.w_family*family_loss

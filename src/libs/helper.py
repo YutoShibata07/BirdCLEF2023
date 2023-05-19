@@ -50,9 +50,12 @@ def do_one_iteration(
 
     x = sample['sound'].to(device).float()
 
-    t = sample['target']
-    for key in t.keys():
-        t[key] = t[key].to(device)
+    if use_taxonomy:
+        t = sample['target']
+        for key in t.keys():
+            t[key] = t[key].to(device)
+    else:
+        t = sample['target'].to(device)
 
     rating = sample['rating'].to(device)
 
@@ -72,10 +75,11 @@ def do_one_iteration(
         optimizer.step()
 
     # keep predicted results and gts for calculate F1 Score
-    gt = t['target'].to('cpu').detach().argmax(dim=1).numpy()
     if use_taxonomy:
+        gt = t['target'].to('cpu').detach().argmax(dim=1).numpy()
         pred = output['species']['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
     else:
+        gt = t.to('cpu').detach().argmax(dim=1).numpy()
         pred = output['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
 
     return batch_size, loss.item(), gt, pred

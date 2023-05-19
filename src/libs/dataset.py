@@ -29,14 +29,15 @@ def get_dataloader(
     bird_label_map:dict = None,
     bird_taxonomy_map:dict = None,
     aug_list:List = [],
-    duration:int = 5
+    duration:int = 5,
+    use_taxonomy:bool = False
 ) -> DataLoader:
 
     if split not in ["train", "val", "test"]:
         message = "split should be selected from ['train', 'val', 'test']."
         logger.error(message)
         raise ValueError(message)
-    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, bird_taxonomy_map=bird_taxonomy_map, split=split, aug_list = aug_list, duration=duration)
+    data = BirdClefDataset(files=files, transform=transform, bird_label_map=bird_label_map, bird_taxonomy_map=bird_taxonomy_map, split=split, aug_list = aug_list, duration=duration, use_taxonomy=use_taxonomy)
     dataloader = DataLoader(
         data,
         batch_size=batch_size,
@@ -84,6 +85,7 @@ class BirdClefDataset(Dataset):
         split:str = 'train',
         aug_list:List = [],
         duration:int = 5,
+        use_taxonomy:bool = False
     ) -> None:
         super().__init__()
 
@@ -94,6 +96,7 @@ class BirdClefDataset(Dataset):
         self.df_meta = self.get_metadata()
         self.split = split
         self.aug_list = aug_list
+        self.use_taxonomy = use_taxonomy
         if 'soundscape' in self.aug_list:
             self.soundscape_df = pd.read_csv('../data_2021/train_soundscape_labels.csv')
             self.soundscape_df = self.soundscape_df[self.soundscape_df.birds=='nocall']
@@ -219,12 +222,18 @@ class BirdClefDataset(Dataset):
                 freq_mask_num = 1 # number of frequency masking
                 for _ in range(freq_mask_num): # frequency masking
                     sound = transforms_freq_mask(sound)
-        
-        sample = {
-            "sound": sound,
-            "target": {'target':labels, 'order_target': order_labels, 'family_target':family_labels},
-            "rating": meta['rating']
-        }
+        if self.use_taxonomy:
+            sample = {
+                "sound": sound,
+                "target": {'target':labels, 'order_target': order_labels, 'family_target':family_labels},
+                "rating": meta['rating']
+            }
+        else:
+            sample = {
+                "sound": sound,
+                "target": labels, 
+                "rating": meta['rating']
+            }
 
         return sample
     

@@ -7,8 +7,26 @@ from torchlibrosa.augmentation import SpecAugmentation
 
 from libs.models.BirdNet_SED import *
 
-
 class Base(nn.Module):
+    def __init__(self, in_features, encoder, output_dim = 264) -> None:
+        super().__init__()
+        self.in_features = in_features
+        self.encoder = encoder
+        self.backbone = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(self.in_features, output_dim)
+            )
+        
+    def forward(self, x, frames_num):
+        clipwise_logits = self.backbone(x)
+        output_dict = {
+            "clipwise_logit": clipwise_logits, # (batch_size, out_dim)
+            'clipwise_output': nn.Softmax(dim = -1)(clipwise_logits)
+        }
+        return output_dict
+    
+class Base_SED(nn.Module):
     def __init__(self, in_features, encoder, output_dim = 264) -> None:
         super().__init__()
         self.in_features = in_features
@@ -26,15 +44,15 @@ class Base(nn.Module):
         init_layer(self.fc1)
         init_bn(self.bn0)
         
-    def forward(self, x):
+    def forward(self, x, frames_num):
         # (batch_size, 3, mel_bins, time_steps)
-        frames_num = x.shape[3]
+        #frames_num = x.shape[3]
 
         # if self.training:
         #     x = self.spec_augmenter(x)
         
         # (batch_size, channels, freq, frames)
-        x = self.encoder(x)
+        #x = self.encoder(x)
 
         x = torch.mean(x, dim=2) # (batch_size, channels, frames)
 
@@ -85,7 +103,7 @@ class BirdNet_Taxonomy(nn.Module):
         layers = list(self.backbone.children())[:-2]
         self.encoder = nn.Sequential(*layers)
 
-        self.models = {'species':Base(in_features=self.in_features, encoder=self.encoder, output_dim=output_dim), 
+        self.models = {'species':Base_SED(in_features=self.in_features, encoder=self.encoder, output_dim=output_dim), 
                        'order':Base(in_features=self.in_features, encoder=self.encoder, output_dim=order_dim), 
                        'family':Base(in_features=self.in_features, encoder=self.encoder, output_dim=fam_dim)}
         self.is_train = is_train
@@ -96,11 +114,16 @@ class BirdNet_Taxonomy(nn.Module):
         self.models['family'].init_weight()
 
     def forward(self, x):
+        frames_num = x.shape[3]
+        y = self.encoder(x)
         if self.is_train:
             outputs_dicts = {}
             labels = ['species', 'order', 'family']
             for label in labels:
-                __output_dict = self.models[label](x)
+                if label in ['order', 'family']:
+                    __output_dict = self.models[label](y.detach().clone(), frames_num)
+                else:
+                    __output_dict = self.models[label](y, frames_num)
                 outputs_dicts[label] = __output_dict
 
             return outputs_dicts    
