@@ -198,7 +198,8 @@ class BirdNet_SED(nn.Module):
 
         framewise_logit = interpolate(segmentwise_logit, interpolate_ratio)
         framewise_logit = pad_framewise_output(framewise_logit, frames_num)
-
+        bg_att = 1-norm_att
+        background_logit = torch.sum(bg_att * self.att_block.cla(x), dim = 2)
         output_dict = {
             "framewise_output": framewise_output, # (batch_size, time_steps, out_dim)
             "segmentwise_output": segmentwise_output, # (batch_size, 4 よくわからん, out_dim])
@@ -206,6 +207,7 @@ class BirdNet_SED(nn.Module):
             "framewise_logit": framewise_logit, # (batch_size, time_steps, out_dim)
             "clipwise_output": clipwise_output, # (batch_size, out_dim)
             "norm_att":norm_att,
+            "background_logit": background_logit,
         }
 
         return output_dict

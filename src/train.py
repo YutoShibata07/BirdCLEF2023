@@ -170,11 +170,15 @@ def main():
                 past_birds = birds_2020_2021_2022
             else:
                 past_birds = birds_2021_2022
+            if 'exp055' in config.model_path:
+                nocall_flg = 0
+            else:
+                nocall_flg = 1
             base_path = '/'.join(args.config.split('/')[:-2])
             pretrained_path = os.path.join(base_path, config.model_path, 'best_model.prm')
             model = get_model(
                 config.model,
-                output_dim=len(past_birds) + 1,
+                output_dim=len(past_birds) + nocall_flg,
                 pretrained_path=pretrained_path
             )
         else:

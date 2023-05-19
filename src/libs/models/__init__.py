@@ -42,7 +42,7 @@ def get_model(
         )
     elif name == "bird_sed_b1":
         model = BirdNet_SED(
-            model_name="tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim
+            model_name="tf_efficientnet_b1_ns", pretrained=True, output_dim=output_dim
         )
     else:
         logger.error("There is no model appropriate to your choice. ")
