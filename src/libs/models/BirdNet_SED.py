@@ -191,5 +191,5 @@ class BirdNet_SED(nn.Module):
             "framewise_logit": framewise_logit, # (batch_size, time_steps, out_dim)
             "clipwise_output": clipwise_output # (batch_size, out_dim)
         }
-
+        print(norm_att[0][0][:5])
         return output_dict
