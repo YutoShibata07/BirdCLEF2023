@@ -23,3 +23,5 @@ for index, row in taxonomy.iterrows():
 
 with open("../csv/taxonomy_dict.pkl", "wb") as tf:
     pickle.dump(taxonomy_dict, tf)
+
+print(taxonomy_dict)

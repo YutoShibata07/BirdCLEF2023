@@ -76,7 +76,7 @@ def do_one_iteration(
 
     # keep predicted results and gts for calculate F1 Score
     if use_taxonomy:
-        gt = t['target'].to('cpu').detach().argmax(dim=1).numpy()
+        gt = t['original_target'].to('cpu').detach().argmax(dim=1).numpy()
         pred = output['species']['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
     else:
         gt = t.to('cpu').detach().argmax(dim=1).numpy()

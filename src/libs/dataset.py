@@ -113,17 +113,28 @@ class BirdClefDataset(Dataset):
 
     def __getitem__(self, idx: int):
         sound = np.load(self.files[idx])
-        target = self.bird_label_dict[self.files[idx].split('/')[-2]]
+        target_species = self.files[idx].split('/')[-2]
+        target = self.bird_label_dict[target_species]
 
-        order_target = self.bird_taxonomy_dict[self.files[idx].split('/')[-2]][0]
-        family_target = self.bird_taxonomy_dict[self.files[idx].split('/')[-2]][1]
-        meta = self.df_meta[self.df_meta['soundname']==self.files[idx].split('/')[-2]+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
+        order_target = self.bird_taxonomy_dict[target_species][0]
+        family_target = self.bird_taxonomy_dict[target_species][1]
+        meta = self.df_meta[self.df_meta['soundname']==target_species+'/'+self.files[idx].split('/')[-1][:-4]].iloc[0]
         
         labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
         labels[target] += 0.9999
         for slabel in eval(meta['secondary_labels']):
             if slabel in self.bird_label_dict.keys():
                 labels[self.bird_label_dict[slabel]] += 0.2999
+        
+        original_labels = np.copy(labels)
+        """for species in self.bird_label_dict.keys():
+            __target = self.bird_label_dict[species]
+            __order_target = self.bird_taxonomy_dict[species][0]
+            __family_target = self.bird_taxonomy_dict[species][1]
+            if (species != target_species) & (__order_target == order_target):
+                labels[__target] += 0.00999
+            if (species != target_species) & (__family_target == family_target):
+                labels[__target] += 0.00999"""
 
         taxonomy_value_list = np.array(list(self.bird_taxonomy_dict.values()))
         order_labels = np.zeros(np.max(taxonomy_value_list[:, 0]), dtype=float) + 0.0001
@@ -132,12 +143,12 @@ class BirdClefDataset(Dataset):
         family_labels = np.zeros(np.max(taxonomy_value_list[:, 1]), dtype=float) + 0.0001
         family_labels[family_target] += 0.9999
 
-        for slabel in eval(meta['secondary_labels']):
+        """for slabel in eval(meta['secondary_labels']):
             if (slabel in self.bird_label_dict.keys()) & (slabel in self.bird_taxonomy_dict.keys()):
                 order_labels[self.bird_taxonomy_dict[slabel][0]] += 0.2999
                 family_labels[self.bird_taxonomy_dict[slabel][1]] += 0.2999
         order_labels = np.clip(order_labels, None, 0.9999)
-        family_labels = np.clip(family_labels, None, 0.9999)
+        family_labels = np.clip(family_labels, None, 0.9999)"""
 
         sound_size = int(self.duration//5)
         if self.split == 'train':
@@ -182,9 +193,20 @@ class BirdClefDataset(Dataset):
                 soundscapes = np.array(soundscapes) #[sound_size, freq_num, time_dim]
                 soundscapes = soundscapes.transpose(0, 2, 1)
                 soundscapes = soundscapes.reshape([-1, soundscapes.shape[-1]]).T
-                ratio = 0.5 * np.random.rand()
-                sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
-                sound = librosa.power_to_db(sound)
+                # 12.5%の確率でnocallとする
+                if np.random.rand() > 0.75:
+                    sound = soundscapes.copy()
+                    labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
+                    labels[-1] = 1.0
+                    order_labels = np.zeros(np.max(taxonomy_value_list[:, 0]), dtype=float) + 0.0001
+                    order_labels[-1] = 1.0
+                    family_labels = np.zeros(np.max(taxonomy_value_list[:, 1]), dtype=float) + 0.0001
+                    family_labels[-1] = 1.0
+                else:
+                    ratio = 0.5 * np.random.rand()
+                    sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
+                    sound = librosa.power_to_db(sound)
+
             if ('random_power' in self.aug_list) & (np.random.rand() > 0.5):
                 sound = random_power(images=sound, power = 3, c= 0.5)
             if ('white' in self.aug_list) & (np.random.rand() > 0.8):
@@ -225,7 +247,7 @@ class BirdClefDataset(Dataset):
         if self.use_taxonomy:
             sample = {
                 "sound": sound,
-                "target": {'target':labels, 'order_target': order_labels, 'family_target':family_labels},
+                "target": {'target':labels, 'order_target': order_labels, 'family_target':family_labels, 'original_target':original_labels},
                 "rating": meta['rating']
             }
         else:

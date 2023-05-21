@@ -90,7 +90,7 @@ class Base_SED(nn.Module):
         return output_dict
 
 class BirdNet_Taxonomy(nn.Module):
-    def __init__(self, model_name:str = 'tf_efficientnet_b0_ns', pretrained:bool = True, output_dim = 264, order_dim = 41, fam_dim = 249, is_train = True) -> None:
+    def __init__(self, model_name:str = 'tf_efficientnet_b1_ns', pretrained:bool = True, output_dim = 264 + 1, order_dim = 41 + 1, fam_dim = 249 + 1, is_train = True) -> None:
         super().__init__()
         self.backbone = timm.create_model(model_name, pretrained=pretrained)
         self.in_features = self.backbone.classifier.in_features
@@ -100,12 +100,12 @@ class BirdNet_Taxonomy(nn.Module):
 
         layers = list(self.backbone.children())[:-2]
         self.encoder = nn.Sequential(*layers)
-        base_sp = Base_SED(in_features=self.in_features, output_dim=output_dim)
-        base_ord = Base(in_features=self.in_features, output_dim=order_dim)
-        base_fam = Base(in_features=self.in_features, output_dim=fam_dim)
-        self.models = {'species':base_sp, 
-                       'order':base_ord, 
-                       'family':base_fam}
+        self.base_sp = Base_SED(in_features=self.in_features, output_dim=output_dim)
+        self.base_ord = Base(in_features=self.in_features, output_dim=order_dim)
+        self.base_fam = Base(in_features=self.in_features, output_dim=fam_dim)
+        self.models = {'species':self.base_sp, 
+                       'order':self.base_ord, 
+                       'family':self.base_fam}
         self.is_train = is_train
 
     def init_weight(self):

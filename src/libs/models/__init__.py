@@ -33,7 +33,7 @@ def get_model(
         )
         logger.error(message)
         raise ValueError(message)
-
+    print('out', output_dim)
     logger.info("{} will be used as a model.".format(name))
     if name == "bird_base":
         model = BirdNet(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim)
@@ -44,18 +44,23 @@ def get_model(
     elif name == 'bird_maxpool':
         model = BirdNetwMaxpool(model_name = "tf_efficientnet_b0_ns", pretrained=False, output_dim=output_dim)
     elif name == 'bird_taxonomy':
-        model = BirdNet_Taxonomy(model_name = "tf_efficientnet_b0_ns", pretrained=False, output_dim=output_dim, is_train=True)
+        model = BirdNet_Taxonomy(model_name = "tf_efficientnet_b0_ns", pretrained=True, output_dim=output_dim, is_train=True)
     else:
         logger.error( "There is no model appropriate to your choice. ")
     if pretrained_path != '':
         logger.info(f'weights loading from:{pretrained_path}')
-        model.load_state_dict(torch.load(pretrained_path))
-        output_dim = 264
+        if name != 'bird_taxonomy':
+            model.load_state_dict(torch.load(pretrained_path))
+        else:
+            base_model = BirdNet_SED(model_name = "tf_efficientnet_b1_ns", pretrained=False, output_dim=output_dim)
+            base_model.load_state_dict(torch.load(pretrained_path))
+            model.encoder = base_model.encoder
+        output_dim = 264 + 1
         if 'base' in pretrained_path:
             model.backbone.classifier = nn.Sequential(
                 nn.Linear(model.in_features, output_dim)
             )
-        elif 'sed' in pretrained_path:
+        elif ('sed' in pretrained_path) and (name != 'bird_taxonomy'):
             logger.info('FC layer updating...')
             model.att_block.att = nn.Conv1d(
                 in_channels=model.in_features,
