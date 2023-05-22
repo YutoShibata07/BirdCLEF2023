@@ -84,13 +84,14 @@ class Base_SED(nn.Module):
             "segmentwise_output": segmentwise_output, # (batch_size, 4 よくわからん, out_dim])
             "logit": logit, # (batch_size, out_dim)
             "framewise_logit": framewise_logit, # (batch_size, time_steps, out_dim)
-            "clipwise_output": clipwise_output # (batch_size, out_dim)
+            "clipwise_output": clipwise_output, # (batch_size, out_dim)
+            "norm_att":norm_att
         }
 
         return output_dict
 
 class BirdNet_Taxonomy(nn.Module):
-    def __init__(self, model_name:str = 'tf_efficientnet_b1_ns', pretrained:bool = True, output_dim = 264 + 1, order_dim = 41 + 1, fam_dim = 249 + 1, is_train = True) -> None:
+    def __init__(self, model_name:str = 'tf_efficientnet_b1_ns', pretrained:bool = True, output_dim = 264 + 1, order_dim = 41, fam_dim = 249, is_train = True) -> None:
         super().__init__()
         self.backbone = timm.create_model(model_name, pretrained=pretrained)
         self.in_features = self.backbone.classifier.in_features

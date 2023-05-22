@@ -13,10 +13,10 @@ class TrainLogger(object):
             "lr",
             "train_time[sec]",
             "train_loss",
-            'train_score',
+            "train_score",
             "val_time[sec]",
             "val_loss",
-            'val_score',
+            "val_score",
         ]
 
         if resume:
@@ -43,10 +43,10 @@ class TrainLogger(object):
         lr: float,
         train_time: int,
         train_loss: float,
-        train_score:float,
+        train_score: float,
         val_time: int,
         val_loss: float,
-        val_score:float,
+        val_score: float,
     ) -> None:
         tmp = pd.Series(
             [
@@ -69,7 +69,8 @@ class TrainLogger(object):
             f"train loss: {train_loss:.4f}\ttrain_score:{train_score:.5f}\tval loss: {val_loss:.4f}\t"
             f"\tval_score:{val_score:.5f}"
         )
-        
+
+
 class ValidLogger(object):
     def __init__(self, log_path: str, resume: bool) -> None:
         self.log_path = log_path

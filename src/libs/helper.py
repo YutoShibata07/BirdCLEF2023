@@ -13,18 +13,26 @@ from torch.utils.data import DataLoader
 
 from libs.meter import AverageMeter, ProgressMeter
 from libs.metric import padded_cmap, padded_cmap_numpy
-from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts, CosineAnnealingLR, ReduceLROnPlateau
+from torch.optim.lr_scheduler import (
+    CosineAnnealingWarmRestarts,
+    CosineAnnealingLR,
+    ReduceLROnPlateau,
+)
 from libs.loss_fn import mixup
+
 __all__ = ["train", "evaluate"]
 
 logger = getLogger(__name__)
 
+
 def softmax(x):
     u = np.sum(np.exp(x), axis=-1)
-    return np.exp(x)/u.reshape(-1, 1)
+    return np.exp(x) / u.reshape(-1, 1)
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 
 def do_one_iteration(
     sample: List,
@@ -76,7 +84,7 @@ def do_one_iteration(
 
     # keep predicted results and gts for calculate F1 Score
     if use_taxonomy:
-        gt = t['original_target'].to('cpu').detach().argmax(dim=1).numpy()
+        gt = t['target'].to('cpu').detach().argmax(dim=1).numpy()
         pred = output['species']['clipwise_output'].to("cpu").detach().numpy() #[batch_size, bin_num * bin_num]
     else:
         gt = t.to('cpu').detach().argmax(dim=1).numpy()
@@ -90,7 +98,7 @@ def train(
     model: nn.Module,
     criterion: Any,
     optimizer: optim.Optimizer,
-    scheduler, 
+    scheduler,
     epoch: int,
     device: str,
     interval_of_progress: int = 50,
@@ -141,14 +149,14 @@ def train(
             progress.display(i)
 
     if isinstance(scheduler, CosineAnnealingLR):
-            scheduler.step()
+        scheduler.step()
     # calculate F1 Score
     # f1s = f1_score(gts, preds, average="macro")
     gts = np.array(gts)
     preds = np.array(preds)
     # preds = softmax(preds)
     preds = sigmoid(preds)
-    score = padded_cmap_numpy(predictions=preds, gts = gts)
+    score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score
 
@@ -166,13 +174,11 @@ def evaluate(
     # keep predicted results and gts for calculate F1 Score
     gts = []
     preds = []
-    
+
     # switch to evaluate mode
     model.eval()
-
     with torch.no_grad():
         for sample in loader:
-            
             batch_size, loss, gt, pred = do_one_iteration(
                 sample, model, criterion, device, "evaluate", do_mixup=do_mixup, use_taxonomy=use_taxonomy
             )
@@ -185,10 +191,10 @@ def evaluate(
             preds += list(pred)
 
     gts = np.array(gts)
-    
-    preds = np.array(preds)
+    # 検証データはnocall labelなし
+    preds = np.array(preds)[:,:-1]
     # preds = softmax(preds)
-    preds = sigmoid(preds)
-    score = padded_cmap_numpy(predictions=preds, gts = gts)
+    # preds = sigmoid(preds)
+    score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score

@@ -238,6 +238,7 @@ def main():
             drop_last=True,
             transform=None,
             bird_label_map = bird_label_map,
+            bird_taxonomy_map=bird_taxonomy_map,
             shuffle=True,
             aug_list=get_augmentations(config.aug_ver),
             duration=config.duration,
@@ -253,6 +254,7 @@ def main():
             drop_last=False,
             transform=None,
             bird_label_map = bird_label_map,
+            bird_taxonomy_map=bird_taxonomy_map,
             shuffle=False,
             aug_list=[],
             duration=config.duration,
@@ -268,11 +270,12 @@ def main():
             drop_last=False,
             transform=None,
             bird_label_map = bird_label_map,
+            bird_taxonomy_map=bird_taxonomy_map,
             shuffle=False,
             aug_list=[],
             duration=config.duration,
-            use_taxonomy=use_taxonomy
-            cleaning_path='',
+            use_taxonomy=use_taxonomy,
+            cleaning_path=''
         )         
         is_done = (os.path.isfile(os.path.join(result_path, f'fold{fold}_final_model.prm'))) | (os.path.isfile(os.path.join(result_path, f'fold{fold}_final_model_.prm')))           
         if is_done == False:
@@ -280,15 +283,16 @@ def main():
             best_score = 0
             best_epoch = 0
             for epoch in range(begin_epoch, config.max_epoch):
+            #for epoch in range(begin_epoch, 1):
                 start = time.time()
                 train_loss, gts, preds, train_score = train(
-                    train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup
+                    train_loader, model, criterion, optimizer, scheduler, epoch, device, do_mixup=config.do_mixup, use_taxonomy=use_taxonomy
                 )
                 train_time = int(time.time()-start)
-                
+
                 start = time.time()
                 val_loss, val_gts, val_preds, val_score = evaluate(
-                    val_loader, model, criterion, device, do_mixup=False
+                    val_loader, model, criterion, device, do_mixup=False, use_taxonomy=use_taxonomy
                 )
                 # tmp_val_df = fold_df.copy()
                 # tmp_val_df[birds] = val_preds
@@ -334,7 +338,7 @@ def main():
             logger.info(f'fold_{fold}_best score:{best_score}')
             best_model = model.load_state_dict(torch.load(os.path.join(result_path, f'fold{fold}_best_model.prm')))
             _, _, best_preds, val_score = evaluate(
-                    val_oof_loader, model, criterion, device, do_mixup=False
+                    val_oof_loader, model, criterion, device, do_mixup=False, use_taxonomy=use_taxonomy
             )
             fold_df[birds] = best_preds   
             oof_df = pd.concat([oof_df, fold_df])
@@ -344,12 +348,12 @@ def main():
             logger.info(model_path)
             model.load_state_dict(torch.load(os.path.join(result_path, f'fold{fold}_best_model.prm')))
             val_loss, val_gts, _, best_score = evaluate(
-                    val_loader, model, criterion, device, do_mixup=False
+                    val_loader, model, criterion, device, do_mixup=False, use_taxonomy=use_taxonomy
             )
             val_score = best_score
             logger.info(f'fold{fold}_best score:{best_score}')
             _, _, best_preds, _ = evaluate(
-                val_oof_loader, model, criterion, device, do_mixup=False
+                val_oof_loader, model, criterion, device, do_mixup=False, use_taxonomy=use_taxonomy
             )
             fold_df[birds] = best_preds   
             oof_df = pd.concat([oof_df, fold_df]) 
