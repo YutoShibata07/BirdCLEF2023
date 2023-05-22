@@ -201,6 +201,8 @@ class BirdClefDataset(Dataset):
                             labels[sec_idx] = 0.9975
                         elif oof_pred[sec_idx] > 0.1:
                             labels[sec_idx] = 0.8
+                        elif oof_pred[sec_idx] > 0.05:
+                            labels[sec_idx] = 0.3
                         else:
                             labels[sec_idx] = 0.0025
             else:
@@ -378,12 +380,36 @@ class BirdClefDataset_hard(Dataset):
         sound = sound[start_idx,:,:]
         return sound, start_idx
 
-    def get_label(self,target, meta):
-        labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
-        labels[target] += 0.9999
-        for slabel in eval(meta['secondary_labels']):
-            if slabel in self.bird_label_dict.keys():
-                labels[self.bird_label_dict[slabel]] += 0.2999
+    def get_label(self,target, meta, soundname, start_idx=0):
+        if (len(self.cleaning_path) > 0) & (soundname in self.oof.soundname.unique()):
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+            # ファイルごとにtrain, valを分けているのでoof_trainに絞らなくても良い
+            oof_pred = self.oof[(self.oof['soundname']==soundname) & (self.oof.image_idx==start_idx)].iloc[0, 4:-1]
+            if oof_pred[target]>0.5:
+                labels[target] += 1.0
+            elif oof_pred[target] > 0.1:
+                labels[target] += 0.9975
+            elif oof_pred[target] > 0.01:
+                labels[target] += 0.5
+            else:
+                labels[target] += 0.2
+            for slabel in eval(meta['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():
+                    sec_idx = self.bird_label_dict[slabel]
+                    if oof_pred[sec_idx]>0.5:
+                        labels[sec_idx] = 0.9975
+                    elif oof_pred[sec_idx] > 0.1:
+                        labels[sec_idx] = 0.8
+                    elif oof_pred[sec_idx] > 0.05:
+                        labels[sec_idx] = 0.3
+                    else:
+                        labels[sec_idx] = 0.0025
+        else:
+            labels = np.zeros(len(self.bird_label_dict.keys()), dtype=float)
+            labels[target] += 0.9999
+            for slabel in eval(meta['secondary_labels']):
+                if slabel in self.bird_label_dict.keys():
+                    labels[self.bird_label_dict[slabel]] += 0.2999
         return labels
     
     def __getitem__(self, idx: int):
@@ -404,7 +430,7 @@ class BirdClefDataset_hard(Dataset):
             target = self.bird_label_dict[self.files[idx_].split('/')[-2]]
             meta = self.df_meta[self.df_meta['soundname']==tmp_soundfile].iloc[0]
             soundname = self.files[idx_].split('/')[-2]+'/'+self.files[idx_].split('/')[-1][:-4]
-            label = self.get_label(target, meta)
+            label = self.get_label(target, meta, soundname, start_idx)
             sound_size = int(self.duration//5)
             # intra mixup
             if (self.split=='train') & (np.random.rand() > 0.75):
@@ -412,6 +438,7 @@ class BirdClefDataset_hard(Dataset):
                 ratio = np.random.rand()
                 sound = librosa.db_to_power(sound) * ratio + librosa.db_to_power(sound2) * (1 - ratio)
                 sound = librosa.power_to_db(sound) 
+                label = label + self.get_label(target, meta, soundname, start_idx)
             if ('soundscape' in self.aug_list) & (np.random.rand() > 0.5):
                 soundscapes = []
                 for i in range(sound_size):
@@ -425,8 +452,8 @@ class BirdClefDataset_hard(Dataset):
                 soundscapes = soundscapes.reshape([-1, soundscapes.shape[-1]]).T
                 if np.random.rand() > 0.75:
                     sound = soundscapes
-                    all_label = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
-                    all_label[-1] = 1.0
+                    label_all = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
+                    label_all[-1] = 1.0
                     break
                 ratio = 0.5 * np.random.rand()
                 sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio

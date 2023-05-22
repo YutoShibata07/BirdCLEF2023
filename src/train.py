@@ -254,7 +254,7 @@ def main():
             cleaning_path='',
             is_hard=False
         ) 
-        if (config.training_year != '2023')|(config.is_hard==True):
+        if (config.training_year != '2023'):
             val_oof_loader = val_loader
             new_val_files_fold = val_files_fold
         else:
@@ -271,6 +271,7 @@ def main():
                 aug_list=[],
                 duration=config.duration,
                 cleaning_path='',
+                is_hard=False,
             )    
         fold_df = all_df.iloc[val_index]
         fold_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
