@@ -246,6 +246,7 @@ class BirdClefDataset(Dataset):
                 soundscapes = np.array(soundscapes) #[sound_size, freq_num, time_dim]
                 soundscapes = soundscapes.transpose(0, 2, 1)
                 soundscapes = soundscapes.reshape([-1, soundscapes.shape[-1]]).T
+                soundscapes = soundscapes[:,:sound.shape[-1]]
                 # 12.5%の確率でnocallとする
                 if np.random.rand() > 0.75:
                     sound = soundscapes.copy()
