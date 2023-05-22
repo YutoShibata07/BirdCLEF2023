@@ -86,6 +86,21 @@ def do_one_iteration(
     )  # [batch_size, bin_num * bin_num]
     return batch_size, loss.item(), gt, pred
 
+def do_one_iteration_emb(
+    sample: List,
+    model: nn.Module,
+    device: str,
+) -> np.ndarray:
+
+
+    x = sample["sound"].to(device).float()
+    t = sample["target"].to(device)
+
+    batch_size = x.shape[0]
+    output = model(x)
+    pred = output["background_logit"].to("cpu").detach().numpy()  # [batch_size, bin_num * bin_num]
+    return pred
+
 
 def train(
     loader: DataLoader,
@@ -199,3 +214,22 @@ def evaluate(
     score = padded_cmap_numpy(predictions=preds, gts=gts)
     # score = score.to('cpu').detach().numpy()[0]
     return losses.get_average(), gts, preds, score
+
+def get_emb(
+    loader: DataLoader,
+    model: nn.Module,
+    device: str,
+) -> np.ndarray:
+    embeddings = []
+    model.eval()
+    with torch.no_grad():
+        for sample in loader:
+            embedding = do_one_iteration_emb(
+                sample, model,  device,
+            )
+            # keep predicted results and gts for calculate F1 Score
+            embeddings += list(embedding)
+
+    # 検証データはnocall labelなし
+    embeddings = np.array(embeddings)
+    return embeddings

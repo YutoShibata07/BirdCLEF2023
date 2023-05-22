@@ -31,6 +31,8 @@ def get_criterion(
         criterion = BCELossV2_nocall(output_dict=True, clip_max=True, att_loss_w=int(loss_fn.split('_')[-1]))
     elif loss_fn == 'bce_output':
         criterion = BinaryCrossEntropyLossWithOutput()
+    elif loss_fn == 'bce_logit':
+        criterion = BinaryCrossEntropyLoss()
     else:
         message = "loss function not found"
         logger.error(message)

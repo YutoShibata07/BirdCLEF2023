@@ -213,7 +213,7 @@ def main() -> None:
         meta_df['filename'] = meta_df['filename'].apply(lambda x:x.split('.')[0] + '.ogg')
         meta_df['filename'] = meta_df['ebird_code'].str.cat(meta_df['filename'], sep='/')
     meta_df['filename'] = meta_df['filename'].apply(lambda x:os.path.join(args.sound_dir, x))
-    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name)
+    feature_extractor = LogMelIntensityExtractor(sr = args.sr, nfft=args.nfft, n_mels=args.n_mels, save_dir=args.save_dir, dataset_name = dataset_name, duration=args.duration)
     filepath_list = meta_df['filename']
     # ToDo -> 並列処理で前処理を実行
     p = Pool(10)

@@ -28,6 +28,7 @@ import gc
 from pathlib import Path
 from contextlib import contextmanager
 from collections import defaultdict, Counter
+import glob 
 
 import scipy as sp
 import numpy as np
@@ -170,11 +171,17 @@ def main():
                 past_birds = birds_2020_2021_2022
             else:
                 past_birds = birds_2021_2022
+            if 'exp055' in config.model_path:
+                nocall_flg = 0
+            else:
+                nocall_flg = 1
             base_path = '/'.join(args.config.split('/')[:-2])
-            pretrained_path = os.path.join(base_path, config.model_path, 'best_model.prm')
+            pretrained_path = glob.glob(os.path.join(base_path, config.model_path) + '/*best*.prm')[0]
+            print(pretrained_path)
+            # pretrained_path = os.path.join(base_path, config.model_path, 'fold0_best_model.prm')
             model = get_model(
                 config.model,
-                output_dim=len(past_birds) + 1,
+                output_dim=len(past_birds) + nocall_flg,
                 pretrained_path=pretrained_path
             )
         else:
@@ -217,12 +224,6 @@ def main():
             seconds = tmp_sound.shape[0]
             new_files = ['..' + file.split('.')[-2] + f'_{i}.npy' for i in range(seconds)]
             new_val_files_fold.extend(new_files)
-        fold_df = all_df.iloc[val_index]
-        fold_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
-        fold_df['filename'] = new_val_files_fold
-        fold_df['second'] = fold_df['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
-        fold_df['primary_label'] = fold_df['filename'].apply(lambda x: x.split('/')[-2])
-        fold_df['soundname'] = fold_df['filename'].map(lambda x: x.split('/')[-4].split('_')[-1] + '_' + os.path.join(x.split('/')[-2], x.split('/')[-1].split('_')[0]))
         train_loader = get_dataloader(
             files = train_files_fold,
             batch_size=config.batch_size,
@@ -236,6 +237,7 @@ def main():
             aug_list=get_augmentations(config.aug_ver),
             duration=config.duration,
             cleaning_path=config.cleaning_path,
+            is_hard=config.is_hard
         )
         val_loader = get_dataloader(
             files = val_files_fold,
@@ -250,21 +252,36 @@ def main():
             aug_list=[],
             duration=config.duration,
             cleaning_path='',
+            is_hard=False
         ) 
-        val_oof_loader = get_dataloader(
-            files = new_val_files_fold,
-            batch_size=config.batch_size,
-            split='oof',
-            num_workers=2,
-            pin_memory=True,
-            drop_last=False,
-            transform=None,
-            bird_label_map = bird_label_map,
-            shuffle=False,
-            aug_list=[],
-            duration=config.duration,
-            cleaning_path='',
-        )         
+        if (config.training_year != '2023'):
+            val_oof_loader = val_loader
+            new_val_files_fold = val_files_fold
+        else:
+            val_oof_loader = get_dataloader(
+                files = new_val_files_fold,
+                batch_size=config.batch_size,
+                split='oof',
+                num_workers=2,
+                pin_memory=True,
+                drop_last=False,
+                transform=None,
+                bird_label_map = bird_label_map,
+                shuffle=False,
+                aug_list=[],
+                duration=config.duration,
+                cleaning_path='',
+                is_hard=False,
+            )    
+        fold_df = all_df.iloc[val_index]
+        fold_df = pd.DataFrame(columns  = ['filename', 'primary_label'])
+        fold_df['filename'] = new_val_files_fold
+        if (config.training_year == '2023')&(config.is_hard==False):
+            fold_df['second'] = fold_df['filename'].apply(lambda x:int(x.split('_')[-1].split('.')[0]))
+        else:
+            fold_df['second'] = 0
+        fold_df['primary_label'] = fold_df['filename'].apply(lambda x: x.split('/')[-2])
+        fold_df['soundname'] = fold_df['filename'].map(lambda x: x.split('/')[-4].split('_')[-1] + '_' + os.path.join(x.split('/')[-2], x.split('/')[-1].split('_')[0]))    
         is_done = (os.path.isfile(os.path.join(result_path, f'fold{fold}_final_model.prm'))) | (os.path.isfile(os.path.join(result_path, f'fold{fold}_final_model_.prm')))           
         if is_done == False:
             logger.info(f'Fold {fold} Start training')
