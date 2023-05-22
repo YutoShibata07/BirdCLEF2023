@@ -345,6 +345,10 @@ class BirdClefDataset_hard(Dataset):
         self.cleaning_path = cleaning_path
         logger.info(f"the number of samples: {len(self.files)}")
         logger.info(f'augmentation list:{self.aug_list}')
+        if 'esc50' in self.aug_list:
+            self.esc_df = pd.read_csv('../data_esc50/esc50.csv')
+            self.esc_df = self.esc_df[self.esc_df.category != 'chirping_birds'].reset_index()
+            self.esc_files = glob.glob('../dataset_soundscapes_esc50/logmel/44100/*.npy')
         if len(self.cleaning_path) > 0:
             self.oof = pd.read_csv(os.path.join('../result', self.cleaning_path, 'oof.csv'))
             self.oof['soundname'] = self.oof['soundname'].apply(lambda x:x.split('_')[-1])
@@ -416,6 +420,7 @@ class BirdClefDataset_hard(Dataset):
         idx2, idx3 = np.random.choice(len(self.files)), np.random.choice(len(self.files))
         label_all = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.0001
         image = np.zeros((128, 626))
+        exit_flg = False
         for num, idx_ in enumerate([idx, idx2, idx3]):
             ds_name = self.files[idx_].split('/')[-4].split('_')[-1]
             if ds_name == 'dataset':
@@ -454,10 +459,11 @@ class BirdClefDataset_hard(Dataset):
                     sound = soundscapes
                     label_all = np.zeros(len(self.bird_label_dict.keys()), dtype=float) + 0.001
                     label_all[-1] = 1.0
-                    break
-                ratio = 0.5 * np.random.rand()
-                sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
-                sound = librosa.power_to_db(sound)
+                    exit_flg = True
+                else:
+                    ratio = 0.5 * np.random.rand()
+                    sound = librosa.db_to_power(sound) * (1-ratio) + librosa.db_to_power(soundscapes) * ratio
+                    sound = librosa.power_to_db(sound)
             if ('random_power' in self.aug_list) & (np.random.rand() > 0.5):
                 sound = random_power(images=sound, power = 3, c= 0.5)
             if ('white' in self.aug_list) & (np.random.rand() > 0.8):
@@ -480,7 +486,10 @@ class BirdClefDataset_hard(Dataset):
                 sound[start:start + leng,:] = sound[start:start + leng,:] + (np.random.sample((leng, sound.shape[1])).astype(np.float32) + 9) * 2 * sound.mean() * 0.05 * (np.random.sample() + 0.3)
             start = np.random.randint(0, sound.shape[1] - 100)
             length = np.random.randint(70, sound.shape[1])
-            if num == 0:
+            if exit_flg:
+                image = sound
+                break
+            elif num == 0:
                 image[:, start:start + length] = sound[:,start:start+length]
             else:
                 image[:, start:start + length] = image[:,start:start+length] + sound[:,start:start+length]/(0.0000001+sound[:,start:start+length].max()) * (random.random()*1+0.5) * image.max()
@@ -488,6 +497,11 @@ class BirdClefDataset_hard(Dataset):
             if np.random.rand() > 0.8:
                 break
         label_all = label_all.clip(0, 1)
+        if ('esc50' in self.aug_list) & (np.random.rand() > 0.75):
+            esc_img = np.load(self.esc_files[np.random.choice(len(self.esc_files))])[0]
+            start = np.random.randint(0, esc_img.shape[1] - 100)
+            length = np.random.randint(70, esc_img.shape[1]-start)
+            image[:, start:start + length] = image[:,start:start+length] + esc_img[:,start:start+length]/(0.0000001+esc_img[:,start:start+length].max()) * (random.random()*1+0.5) * image.max()
         image = mono_to_color(image)
         sound = image.astype(float)
         if self.transform is not None:

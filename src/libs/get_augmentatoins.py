@@ -41,6 +41,8 @@ def get_augmentations(ver: int):
         aug_list = ['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape', 'cutout']
     elif ver == 9:
         aug_list = ['white', 'pink', 'random_power', 'upper_freq_decay', 'soundscape', 'bandpass']
+    elif ver == 10:
+        aug_list = ["white", "pink", "random_power", "upper_freq_decay", "soundscape", 'esc50']
     else:
         message = "augmentation version not found"
         raise ValueError(message)
