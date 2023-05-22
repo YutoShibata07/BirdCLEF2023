@@ -141,7 +141,10 @@ class BirdNet_SED(nn.Module):
     ) -> None:
         super().__init__()
         self.backbone = timm.create_model(model_name, pretrained=pretrained)
-        self.in_features = self.backbone.classifier.in_features
+        if 'eca' in model_name:
+            self.in_features = self.backbone.head.fc.in_features
+        else:
+            self.in_features = self.backbone.classifier.in_features
         self.backbone.classifier = nn.Sequential(
             nn.Linear(self.in_features, output_dim)
         )

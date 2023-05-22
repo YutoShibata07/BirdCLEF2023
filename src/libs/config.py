@@ -58,6 +58,8 @@ class Config:
     cleaning_path: str = ""  # ''の場合はresult_dirのoofが使用される。 'False'の場合はcleaningなし。　別のresult_dirのoofを使いたい時はそのdir_nameを入力
 
     n_split: int = 5
+    
+    is_hard:bool = False
 
     def __post_init__(self) -> None:
         self._type_check()

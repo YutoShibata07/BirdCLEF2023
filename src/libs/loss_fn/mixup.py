@@ -17,8 +17,8 @@ def mixup_data(x, y, alpha=0.6, use_cuda=True):
 
     mixed_x = lam * x + (1 - lam) * x[index, :]
     y_a = y + y[index] - y * y[index]
-    nocall_flg = y_a[:,-1] > torch.Tensor([0.999] * 32).to('cuda')#torch.gt(y_a[:,-1], 0.999)
-    same_target_flg = y_a.sum(axis = -1) < torch.Tensor([2.0] * 32).to('cuda')
+    nocall_flg = y_a[:,-1] > torch.Tensor([0.999] * y_a.shape[0]).to('cuda')#torch.gt(y_a[:,-1], 0.999)
+    same_target_flg = y_a.sum(axis = -1) < torch.Tensor([2.0] * y_a.shape[0]).to('cuda')
     y_a[(nocall_flg==True)&(same_target_flg==False),-1] = 0.002
     # if ((same_target_flg==False) * (nocall_flg)).sum()>0:
     #     print(y_a)
